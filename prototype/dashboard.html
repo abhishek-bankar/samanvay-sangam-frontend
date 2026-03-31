@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    (function() {
+      const role = getCurrentRole();
+      const currentUser = getMockUserForRole(role);
+      const project = getCurrentProject();
+      const projectId = project.id;
+
+      // Render header with project banner and tabs
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Dashboard' });
+
+      // Get supports filtered by role
+      const allProjectSupports = getProjectSupports(projectId);
+      const batches = getProjectBatches(projectId);
+      let supports;
+
+      switch (role) {
+        case 'Actionee':
+          supports = allProjectSupports.filter(s => s.assignedTo === currentUser.id);
+          break;
+        case 'Client':
+          supports = allProjectSupports.filter(s =>
+            ['Sent to Client', 'Client Approved', 'Client Rejected'].includes(s.status)
+          );
+          break;
+        case 'PM':
+        case 'SME':
+        default:
+          supports = allProjectSupports;
+          break;
+      }
+
+      const statusCounts = getStatusCounts(supports);
+
+      // Build page
+      const main = document.getElementById('main-content');
+      let html = '';
+
+      html += `<div class="section-header">
+        <h1 class="section-title">Dashboard</h1>
+        <a href="index.html" class="btn btn-secondary btn-sm">&larr; All Projects</a>
+      </div>`;
+
+      // === KPI CARDS ===
+      html += '<div class="kpi-grid">';
+
+      if (role === 'PM' || role === 'SME') {
+        // Show all status counts
+        html += buildKpiCard('Total', statusCounts.total, '--color-primary');
+        SUPPORT_STATUSES.forEach(status => {
+          if (statusCounts[status] > 0) {
+            html += buildKpiCard(status, statusCounts[status]);
+          }
+        });
+      } else if (role === 'Actionee') {
+        // Actionee: their assigned support counts by status
+        html += buildKpiCard('My Total', statusCounts.total, '--color-primary');
+        SUPPORT_STATUSES.forEach(status => {
+          if (statusCounts[status] > 0) {
+            html += buildKpiCard(status, statusCounts[status]);
+          }
+        });
+      } else if (role === 'Client') {
+        // Client: Sent to Client, Client Approved, Client Rejected + batch progress
+        html += buildKpiCard('Awaiting Review', statusCounts['Sent to Client'] || 0, '--color-info');
+        html += buildKpiCard('Client Approved', statusCounts['Client Approved'] || 0, '--color-success');
+        html += buildKpiCard('Client Rejected', statusCounts['Client Rejected'] || 0, '--color-error');
+        html += buildKpiCard('Total Visible', statusCounts.total, '--color-primary');
+
+        // Batch progress KPIs
+        batches.forEach(batch => {
+          const progress = getBatchProgress(batch.id);
+          html += `<div class="kpi-card">
+            <div class="kpi-value">${progress.percentage}%</div>
+            <div class="kpi-label">${escapeHtml(batch.name)}</div>
+          </div>`;
+        });
+      }
+
+      html += '</div>';
+
+      // === CHARTS ===
+      html += '<div class="chart-grid">';
+
+      if (role === 'PM' || role === 'SME') {
+        // Chart 1: Status Distribution (doughnut)
+        html += `<div class="chart-card">
+          <div class="chart-card-title">Status Distribution</div>
+          <div class="chart-wrapper"><canvas id="chart-status-dist"></canvas></div>
+        </div>`;
+        // Chart 2: Supports per Batch (bar)
+        html += `<div class="chart-card">
+          <div class="chart-card-title">Supports per Batch</div>
+          <div class="chart-wrapper"><canvas id="chart-batch-bar"></canvas></div>
+        </div>`;
+      } else if (role === 'Actionee') {
+        // Chart 1: My Work by Status (doughnut)
+        html += `<div class="chart-card">
+          <div class="chart-card-title">My Work by Status</div>
+          <div class="chart-wrapper"><canvas id="chart-my-status"></canvas></div>
+        </div>`;
+      } else if (role === 'Client') {
+        // Chart 1: Batch Progress (bar)
+        html += `<div class="chart-card">
+          <div class="chart-card-title">Batch Progress</div>
+          <div class="chart-wrapper"><canvas id="chart-batch-progress"></canvas></div>
+        </div>`;
+      }
+
+      html += '</div>';
+
+      main.innerHTML = html;
+
+      // === RENDER CHARTS ===
+
+      if (role === 'PM' || role === 'SME') {
+        // Status distribution pie/doughnut
+        const pieLabels = [];
+        const pieData = [];
+        const pieColors = [
+          '#6b7280', '#1d4ed8', '#b45309', '#4338ca', '#6d28d9',
+          '#dc2626', '#059669', '#0891b2', '#16a34a', '#e11d48', '#c2410c'
+        ];
+        const usedColors = [];
+        SUPPORT_STATUSES.forEach((status, i) => {
+          if (statusCounts[status] > 0) {
+            pieLabels.push(status);
+            pieData.push(statusCounts[status]);
+            usedColors.push(pieColors[i % pieColors.length]);
+          }
+        });
+        createPieChart('chart-status-dist', pieLabels, pieData, usedColors);
+
+        // Supports per batch bar chart
+        const batchLabels = batches.map(b => b.name.length > 25 ? b.name.substring(0, 25) + '...' : b.name);
+        const batchData = batches.map(b => getBatchSupports(b.id).length);
+        createBarChart('chart-batch-bar', batchLabels, [{ label: 'Supports', data: batchData, color: '#1d4ed8' }]);
+
+      } else if (role === 'Actionee') {
+        // My work by status doughnut
+        const myLabels = [];
+        const myData = [];
+        const myColors = [];
+        const colorMap = {
+          'Assigned': '#1d4ed8', 'In Progress': '#b45309', 'Submitted': '#4338ca',
+          'Under SME Review': '#6d28d9', 'SME Rejected': '#dc2626', 'SME Approved': '#059669',
+          'Sent to Client': '#0891b2', 'Client Approved': '#16a34a', 'Client Rejected': '#e11d48',
+          'Rework In Progress': '#c2410c',
+        };
+        SUPPORT_STATUSES.forEach(status => {
+          if (statusCounts[status] > 0) {
+            myLabels.push(status);
+            myData.push(statusCounts[status]);
+            myColors.push(colorMap[status] || '#6b7280');
+          }
+        });
+        createPieChart('chart-my-status', myLabels, myData, myColors);
+
+      } else if (role === 'Client') {
+        // Batch progress bar chart
+        const bLabels = batches.map(b => b.name.length > 25 ? b.name.substring(0, 25) + '...' : b.name);
+        const bCompleted = batches.map(b => getBatchProgress(b.id).completed);
+        const bRemaining = batches.map(b => {
+          const prog = getBatchProgress(b.id);
+          return prog.total - prog.completed;
+        });
+        createBarChart('chart-batch-progress', bLabels, [
+          { label: 'Client Approved', data: bCompleted, color: '#16a34a' },
+          { label: 'Remaining', data: bRemaining, color: '#e2e8f0' },
+        ]);
+      }
+    })();
+
+    function buildKpiCard(label, value, colorVar) {
+      const colorStyle = colorVar ? `color:var(${colorVar})` : '';
+      return `<div class="kpi-card">
+        <div class="kpi-value" style="${colorStyle}">${value}</div>
+        <div class="kpi-label">${escapeHtml(label)}</div>
+      </div>`;
+    }
+  </script>
+</body>
+</html>

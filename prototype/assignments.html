@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assignments — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      const role = getCurrentRole();
+      const project = getCurrentProject();
+      const projectId = project.id;
+
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Assignments' });
+
+      if (!checkRoleAccess(['PM', 'SME'])) return;
+
+      const allSupports = getProjectSupports(projectId);
+      const unassignedSupports = allSupports.filter(s => s.status === 'Unassigned');
+      const assignedSupports = allSupports.filter(s => s.status !== 'Unassigned');
+
+      // Build actionee options from project's actioneeIds
+      const actioneeOptions = project.actioneeIds.map(id => {
+        const user = USERS.find(u => u.id === id);
+        return user ? { id: user.id, name: user.name } : null;
+      }).filter(Boolean);
+
+      // Compute per-actionee stats
+      const actioneeStats = {};
+      project.actioneeIds.forEach(id => {
+        const user = USERS.find(u => u.id === id);
+        if (!user) return;
+        const theirSupports = allSupports.filter(s => s.assignedTo === id);
+        actioneeStats[id] = {
+          name: user.name,
+          assigned: theirSupports.length,
+          completed: theirSupports.filter(s => ['SME Approved', 'Sent to Client', 'Client Approved'].includes(s.status)).length,
+        };
+      });
+
+      const main = document.getElementById('main-content');
+      let html = '';
+
+      // Page title
+      html += `<div class="section-header">
+        <h1 class="section-title">SME Assignments</h1>
+        <a href="dashboard.html?project=${projectId}" class="btn btn-secondary btn-sm">&larr; Dashboard</a>
+      </div>`;
+
+      // ========== SECTION 1: Unassigned Supports ==========
+      html += `<h2 class="text-lg font-semibold mb-3">Unassigned Supports</h2>`;
+
+      // Summary card
+      html += `<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:var(--color-warning)">${unassignedSupports.length}</div>
+          <div class="kpi-label">Unassigned Supports</div>
+        </div>
+      </div>`;
+
+      // Assign toolbar
+      html += `<div class="flex items-center gap-3 mb-3" style="flex-wrap:wrap">
+        <select id="actionee-select" class="form-select" style="max-width:250px">
+          <option value="">-- Select Actionee --</option>
+          ${actioneeOptions.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" onclick="assignSelected()">Assign Selected</button>
+      </div>`;
+
+      // Unassigned table
+      html += `<div id="unassigned-table" class="mb-4"></div>`;
+
+      // ========== SECTION 2: Assigned Supports (by Actionee) ==========
+      html += `<div class="separator"></div>`;
+      html += `<h2 class="text-lg font-semibold mb-3">Assigned Supports (by Actionee)</h2>`;
+
+      // Actionee summary cards
+      html += `<div class="summary-row">`;
+      Object.entries(actioneeStats).forEach(([id, stats]) => {
+        if (stats.assigned > 0) {
+          html += `<div class="card">
+            <div class="card-title">${escapeHtml(stats.name)}</div>
+            <div class="flex gap-4 mt-2">
+              <div><span class="text-2xl font-bold text-primary">${stats.assigned}</span><div class="text-xs text-muted">Assigned</div></div>
+              <div><span class="text-2xl font-bold text-success">${stats.completed}</span><div class="text-xs text-muted">Completed</div></div>
+            </div>
+          </div>`;
+        }
+      });
+      html += `</div>`;
+
+      // Assigned supports table
+      html += `<div id="assigned-table"></div>`;
+
+      main.innerHTML = html;
+
+      // ========== Create Unassigned DataTable ==========
+      createTable('unassigned-table', {
+        data: unassignedSupports,
+        selectable: true,
+        pageSize: 20,
+        defaultSort: 'tagId',
+        columns: [
+          { header: 'Support Tag ID', accessor: 'tagId', render: (val) => `<span class="font-mono text-sm">${escapeHtml(val)}</span>` },
+          { header: 'Batch ID', accessor: 'batchId', render: (val) => escapeHtml(val) },
+          { header: 'DWG File', accessor: 'dwgFile', render: (val) => `<span class="text-xs font-mono">${escapeHtml(val)}</span>` },
+          { header: 'Created Date', accessor: 'createdAt', render: (val) => formatDate(val) },
+        ],
+      });
+
+      // ========== Create Assigned DataTable ==========
+      createTable('assigned-table', {
+        data: assignedSupports,
+        selectable: false,
+        pageSize: 20,
+        defaultSort: 'tagId',
+        columns: [
+          {
+            header: 'Support Tag ID', accessor: 'tagId',
+            render: (val, row) => `<a href="support-detail.html?project=${projectId}&support=${row.id}" class="font-mono text-sm">${escapeHtml(val)}</a>`
+          },
+          { header: 'Status', accessor: 'status', render: (val) => statusBadge(val) },
+          { header: 'Actionee', accessor: 'assignedTo', render: (val) => escapeHtml(getUserName(val)) },
+          { header: 'Assigned Date', accessor: 'assignedAt', render: (val) => formatDate(val) },
+          { header: 'TAT (days)', accessor: 'turnaroundDays', render: (val) => val ? val : '—' },
+          {
+            header: 'Actions', accessor: 'id',
+            render: (val, row) => {
+              if (['Assigned', 'In Progress'].includes(row.status)) {
+                return `<button class="btn btn-secondary btn-sm" onclick="openReassignModal('${row.id}', '${escapeHtml(row.tagId)}')">Reassign</button>`;
+              }
+              return '—';
+            }
+          },
+        ],
+      });
+
+      // ========== Action functions ==========
+      window.assignSelected = function() {
+        const table = window._tables['unassigned-table'];
+        const selectedIds = [...table.selectedIds];
+        const actioneeId = document.getElementById('actionee-select').value;
+
+        if (selectedIds.length === 0) {
+          showToast('Please select at least one support to assign.', 'error');
+          return;
+        }
+        if (!actioneeId) {
+          showToast('Please select an actionee.', 'error');
+          return;
+        }
+
+        const actioneeName = getUserName(actioneeId);
+        showToast(`${selectedIds.length} support${selectedIds.length > 1 ? 's' : ''} assigned to ${actioneeName}`);
+      };
+
+      window.openReassignModal = function(supportId, tagId) {
+        const bodyHtml = `
+          <p class="text-sm mb-3">Reassign support <strong>${tagId}</strong> to a different actionee:</p>
+          <div class="form-group">
+            <label class="form-label">New Actionee</label>
+            <select id="reassign-actionee" class="form-select">
+              <option value="">-- Select Actionee --</option>
+              ${actioneeOptions.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
+            </select>
+          </div>
+        `;
+        const footerHtml = `
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmReassign('${supportId}', '${tagId}')">Confirm Reassign</button>
+        `;
+        showModal('Reassign Support', bodyHtml, footerHtml);
+      };
+
+      window.confirmReassign = function(supportId, tagId) {
+        const select = document.getElementById('reassign-actionee');
+        if (!select || !select.value) {
+          showToast('Please select an actionee.', 'error');
+          return;
+        }
+        const name = getUserName(select.value);
+        closeModal();
+        showToast(`${tagId} reassigned to ${name}`);
+      };
+    })();
+  </script>
+</body>
+</html>

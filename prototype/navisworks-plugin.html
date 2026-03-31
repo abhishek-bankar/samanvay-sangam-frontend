@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navisworks Extraction Service — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* ===== NAVISWORKS EXTRACTION SERVICE PAGE STYLES ===== */
+
+    body {
+      background: #f0f2f5;
+    }
+
+    /* Title bar — simulated desktop application window chrome */
+    .nw-title-bar {
+      background: #2d2d2d;
+      color: #e0e0e0;
+      padding: 0 1.5rem;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .nw-title-bar .title-text {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .nw-title-bar .nw-icon {
+      width: 24px;
+      height: 24px;
+      background: #4a9eff;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.625rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .nw-title-bar .connection-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #a0a0a0;
+    }
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 4px rgba(34, 197, 94, 0.4); }
+      50% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.8); }
+    }
+
+    /* Window chrome dots */
+    .window-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .window-dots span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-close { background: #ff5f57; }
+    .dot-min { background: #febc2e; }
+    .dot-max { background: #28c840; }
+
+    /* Main content area */
+    .nw-main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    /* Section styling */
+    .nw-section {
+      margin-bottom: 1.5rem;
+    }
+    .nw-section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+    }
+
+    /* Custom badges for this page */
+    .badge-queued {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+    .badge-extracting {
+      background: #fef3c7;
+      color: #b45309;
+      border-color: #fcd34d;
+    }
+    .badge-complete-green {
+      background: #d1fae5;
+      color: #059669;
+      border-color: #6ee7b7;
+    }
+
+    /* Active extraction card */
+    .extraction-card {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .extraction-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+    .extraction-card-header {
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-bg-muted);
+    }
+    .extraction-card-body {
+      padding: 1.25rem;
+    }
+
+    /* Progress bar — larger variant */
+    .progress-lg .progress-bar-container {
+      height: 0.75rem;
+      border-radius: 0.375rem;
+    }
+    .progress-lg .progress-bar-fill {
+      border-radius: 0.375rem;
+    }
+    .progress-text {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    /* Log output area — terminal style */
+    .log-output {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      max-height: 280px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      border: 1px solid #313244;
+    }
+    .log-output .log-time { color: #6c7086; }
+    .log-output .log-ok { color: #a6e3a1; }
+    .log-output .log-info { color: #89b4fa; }
+    .log-output .log-warn { color: #f9e2af; }
+    .log-output .log-file { color: #cba6f7; }
+    .log-output .log-size { color: #94e2d5; }
+
+    .log-output::-webkit-scrollbar { width: 6px; }
+    .log-output::-webkit-scrollbar-track { background: #1e1e2e; }
+    .log-output::-webkit-scrollbar-thumb { background: #45475a; border-radius: 3px; }
+
+    /* Extraction action buttons */
+    .extraction-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    /* API Configuration — collapsible panel */
+    .config-toggle {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .config-toggle-header {
+      width: 100%;
+      padding: 0.875rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+      background: none;
+      border: none;
+      font: inherit;
+      color: inherit;
+      text-align: left;
+    }
+    .config-toggle-header:hover {
+      background: var(--color-bg-muted);
+    }
+    .config-toggle-body {
+      display: none;
+      padding: 0 1.25rem 1.25rem;
+      border-top: 1px solid var(--color-border);
+    }
+    .config-toggle.open .config-toggle-body {
+      display: block;
+    }
+    .config-toggle .chevron {
+      transition: transform 0.2s;
+      color: var(--color-text-muted);
+    }
+    .config-toggle.open .chevron {
+      transform: rotate(180deg);
+    }
+    .config-row {
+      display: flex;
+      align-items: baseline;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.8125rem;
+    }
+    .config-row:last-child { border-bottom: none; }
+    .config-label {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      min-width: 180px;
+      flex-shrink: 0;
+    }
+    .config-value {
+      color: var(--color-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+
+    /* Pipeline flow — three connected step cards */
+    .pipeline-flow {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 0.75rem;
+    }
+    .pipeline-step {
+      flex: 1;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1rem;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .pipeline-step:hover { box-shadow: var(--shadow-md); }
+    .pipeline-step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.5rem;
+    }
+    .pipeline-step-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 0.25rem;
+    }
+    .pipeline-step-desc {
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      flex-shrink: 0;
+      color: var(--color-text-muted);
+      font-size: 1.25rem;
+    }
+    .pipeline-note {
+      text-align: center;
+      margin-top: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+
+    /* Back link */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      color: var(--color-primary);
+      margin-bottom: 1.25rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nw-main { padding: 1rem; }
+      .pipeline-flow { flex-direction: column; }
+      .pipeline-arrow { width: auto; height: 32px; transform: rotate(90deg); }
+      .config-row { flex-direction: column; gap: 0.25rem; }
+      .config-label { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Title Bar — simulated application window chrome -->
+  <div class="nw-title-bar">
+    <div class="title-text">
+      <div class="window-dots">
+        <span class="dot-close"></span>
+        <span class="dot-min"></span>
+        <span class="dot-max"></span>
+      </div>
+      <div class="nw-icon">NW</div>
+      <span>SANGAM Navisworks Extraction Service &mdash; Virtual Server</span>
+    </div>
+    <div class="connection-indicator">
+      <span class="connection-dot"></span>
+      <span>Connected to SANGAM API</span>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="nw-main">
+
+    <a href="system-overview.html" class="back-link">&larr; Back to System Overview</a>
+
+    <!-- ========== Section 1: Extraction Queue ========== -->
+    <div class="nw-section">
+      <div class="nw-section-title">
+        <span class="section-icon">&#9776;</span>
+        Extraction Queue
+      </div>
+      <p class="text-sm text-secondary mb-3">Jobs are added to this queue when a PM triggers extraction from the web app. The service picks them up automatically &mdash; no manual action needed.</p>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Batch ID</th>
+              <th>Project</th>
+              <th>Support Count</th>
+              <th>Model File</th>
+              <th>Triggered By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-mono text-sm">B-2026-001</td>
+              <td>Hassi Messaoud Gas Processing &mdash; Area A Revision</td>
+              <td>20</td>
+              <td class="font-mono text-sm">HM_Area_A_Rev2.nwd</td>
+              <td>Abhishek Bankar (PM)</td>
+              <td><span class="badge badge-queued">Waiting</span></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-sm">B-2026-005</td>
+              <td>Ras Tanura Piping Retrofit &mdash; Section 2 Piping</td>
+              <td>15</td>
+              <td class="font-mono text-sm">RT_Section2.nwd</td>
+              <td>Priya Sharma (PM)</td>
+              <td><span class="badge badge-queued">Waiting</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== Section 2: Active Extraction ========== -->
+    <div class="nw-section">
+      <div class="nw-section-title">
+        <span class="section-icon">&#9881;</span>
+        Active Extraction
+      </div>
+      <div class="extraction-card">
+        <div class="extraction-card-header">
+          <div>
+            <div style="font-weight:600; font-size:0.9375rem; color:var(--color-text);">
+              B-2026-004 &mdash; Ras Tanura Piping Retrofit &mdash; Section 1 Piping
+            </div>
+            <div class="text-sm text-secondary mt-1">
+              Model: <span class="font-mono">RT_Section1.nwd</span>
+            </div>
+          </div>
+          <span class="badge badge-extracting">Extracting</span>
+        </div>
+        <div class="extraction-card-body">
+          <div class="progress-text">12 / 25 supports extracted (48%)</div>
+          <div class="progress-lg">
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill warning" style="width: 48%"></div>
+            </div>
+          </div>
+
+          <!-- Log output — terminal-style scrollable area -->
+          <div class="log-output" id="log-output">
+            <div><span class="log-time">[14:23:01]</span> <span class="log-info">Starting extraction for batch B-2026-004...</span></div>
+            <div><span class="log-time">[14:23:02]</span> Loading Navisworks model: <span class="log-file">RT_Section1.nwd</span> <span class="log-size">(245 MB)</span></div>
+            <div><span class="log-time">[14:23:08]</span> <span class="log-ok">Model loaded.</span> 25 supports identified.</div>
+            <div><span class="log-time">[14:23:09]</span> Extracting <span class="log-file">SP-2026--001</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--001_RevA.dwg</span> <span class="log-size">(2.3 MB)</span></div>
+            <div><span class="log-time">[14:23:11]</span> Extracting <span class="log-file">SP-2026--002</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--002_RevA.dwg</span> <span class="log-size">(1.8 MB)</span></div>
+            <div><span class="log-time">[14:23:13]</span> Extracting <span class="log-file">SP-2026--003</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--003_RevA.dwg</span> <span class="log-size">(3.1 MB)</span></div>
+            <div><span class="log-time">[14:23:15]</span> Extracting <span class="log-file">SP-2026--004</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--004_RevA.dwg</span> <span class="log-size">(2.0 MB)</span></div>
+            <div><span class="log-time">[14:23:17]</span> Extracting <span class="log-file">SP-2026--005</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--005_RevA.dwg</span> <span class="log-size">(1.5 MB)</span></div>
+            <div><span class="log-time">[14:23:19]</span> Extracting <span class="log-file">SP-2026--006</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--006_RevA.dwg</span> <span class="log-size">(2.7 MB)</span></div>
+            <div><span class="log-time">[14:23:21]</span> Extracting <span class="log-file">SP-2026--007</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--007_RevA.dwg</span> <span class="log-size">(1.9 MB)</span></div>
+            <div><span class="log-time">[14:23:23]</span> Extracting <span class="log-file">SP-2026--008</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--008_RevA.dwg</span> <span class="log-size">(3.4 MB)</span></div>
+            <div><span class="log-time">[14:23:25]</span> Extracting <span class="log-file">SP-2026--009</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--009_RevA.dwg</span> <span class="log-size">(2.1 MB)</span></div>
+            <div><span class="log-time">[14:23:27]</span> Extracting <span class="log-file">SP-2026--010</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--010_RevA.dwg</span> <span class="log-size">(1.6 MB)</span></div>
+            <div><span class="log-time">[14:23:29]</span> Extracting <span class="log-file">SP-2026--011</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--011_RevA.dwg</span> <span class="log-size">(2.8 MB)</span></div>
+            <div><span class="log-time">[14:23:31]</span> Extracting <span class="log-file">SP-2026--012</span>... <span class="log-ok">OK</span> &rarr; <span class="log-file">SP-2026--012_RevA.dwg</span> <span class="log-size">(2.4 MB)</span></div>
+            <div><span class="log-time">[14:23:35]</span> <span class="log-info">Pushing extracted files to SANGAM API...</span></div>
+            <div><span class="log-time">[14:23:36]</span> <span class="log-warn">12/25 files pushed. Continuing...</span></div>
+          </div>
+
+          <div class="extraction-actions">
+            <button class="btn btn-sm btn-danger" onclick="showToast('Extraction cancelled for B-2026-004', 'error')">Cancel</button>
+            <button class="btn btn-sm btn-warning" onclick="showToast('Extraction paused for B-2026-004', 'info')">Pause</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Section 3: Completed Extractions ========== -->
+    <div class="nw-section">
+      <div class="nw-section-title">
+        <span class="section-icon">&#10003;</span>
+        Completed Extractions
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Batch ID</th>
+              <th>Project</th>
+              <th>Supports</th>
+              <th>Duration</th>
+              <th>Files Pushed</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-mono text-sm">B-2025-001</td>
+              <td>Hassi Messaoud Gas Processing</td>
+              <td>40</td>
+              <td>4m 23s</td>
+              <td>40 / 40</td>
+              <td><span class="badge badge-complete-green">Complete</span></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-sm">B-2025-002</td>
+              <td>Hassi Messaoud Gas Processing</td>
+              <td>55</td>
+              <td>6m 12s</td>
+              <td>55 / 55</td>
+              <td><span class="badge badge-complete-green">Complete</span></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-sm">B-2025-003</td>
+              <td>Hassi Messaoud Gas Processing</td>
+              <td>35</td>
+              <td>3m 45s</td>
+              <td>35 / 35</td>
+              <td><span class="badge badge-complete-green">Complete</span></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-sm">B-2026-002</td>
+              <td>Jubail Refinery Expansion</td>
+              <td>45</td>
+              <td>5m 08s</td>
+              <td>45 / 45</td>
+              <td><span class="badge badge-complete-green">Complete</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== Section 4: API Configuration (collapsed) ========== -->
+    <div class="nw-section">
+      <div class="config-toggle" id="config-panel">
+        <button class="config-toggle-header" onclick="toggleConfig()" type="button" aria-expanded="false" id="config-toggle-btn">
+          <div class="nw-section-title" style="margin-bottom:0">
+            <span class="section-icon">&#9881;</span>
+            API Configuration
+          </div>
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="config-toggle-body">
+          <div style="padding-top:1rem">
+            <div class="config-row">
+              <span class="config-label">SANGAM API URL</span>
+              <span class="config-value">https://sangam.inventivebiz.com/api</span>
+            </div>
+            <div class="config-row">
+              <span class="config-label">Auth</span>
+              <span class="config-value">Service Account (navisworks-agent@system)</span>
+            </div>
+            <div class="config-row">
+              <span class="config-label">File Push Endpoint</span>
+              <span class="config-value">/api/method/sangam.api.push_dwg</span>
+            </div>
+            <div class="config-row">
+              <span class="config-label">Batch Fetch Endpoint</span>
+              <span class="config-value">/api/method/sangam.api.get_batch</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Section 5: Pipeline Flow ========== -->
+    <div class="nw-section">
+      <div class="nw-section-title">
+        <span class="section-icon">&#8634;</span>
+        Extraction Pipeline
+      </div>
+      <div class="pipeline-flow">
+        <div class="pipeline-step">
+          <div class="pipeline-step-number">1</div>
+          <div class="pipeline-step-title">Fetch Batch</div>
+          <div class="pipeline-step-desc">Pull model file + support list from SANGAM API</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="pipeline-step-number">2</div>
+          <div class="pipeline-step-title">Extract Supports</div>
+          <div class="pipeline-step-desc">Open model, extract one DWG per Support Tag ID</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+          <div class="pipeline-step-number">3</div>
+          <div class="pipeline-step-title">Push Back</div>
+          <div class="pipeline-step-desc">Upload DWG files to SANGAM, linked to Support Tag ID + Batch ID</div>
+        </div>
+      </div>
+      <div class="pipeline-note">Fully automated &mdash; PM triggers from web app, service processes automatically</div>
+    </div>
+
+    <!-- Bottom back link -->
+    <div style="margin-top: 1rem; padding-bottom: 2rem;">
+      <a href="system-overview.html" class="back-link">&larr; Back to System Overview</a>
+    </div>
+
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Toggle API configuration panel
+    function toggleConfig() {
+      var panel = document.getElementById('config-panel');
+      panel.classList.toggle('open');
+      var btn = document.getElementById('config-toggle-btn');
+      btn.setAttribute('aria-expanded', panel.classList.contains('open'));
+    }
+
+    // Auto-scroll log output to bottom on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      var log = document.getElementById('log-output');
+      if (log) {
+        log.scrollTop = log.scrollHeight;
+      }
+    });
+  </script>
+
+</body>
+</html>

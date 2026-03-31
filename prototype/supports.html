@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support Register — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      const projectId = getCurrentProjectId();
+      const project = getCurrentProject();
+      const role = getCurrentRole();
+
+      // Render header with project banner and tabs
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Support Register' });
+
+      // Access control: PM and SME only
+      if (!checkRoleAccess(['PM', 'SME'])) return;
+
+      const supports = getProjectSupports(projectId);
+      const batches = getProjectBatches(projectId);
+      const batchIds = batches.map(b => b.id);
+
+      const main = document.getElementById('main-content');
+      let html = '';
+
+      html += `<h1 class="page-title">Support Register</h1>`;
+      html += `<p class="page-subtitle">${supports.length} support${supports.length !== 1 ? 's' : ''} in this project</p>`;
+
+      // Table container with toolbar
+      html += `<div class="table-container">`;
+      html += `<div class="table-toolbar">`;
+      html += `<div class="table-toolbar-left">`;
+      html += renderSearchBar('supports-table', 'Search supports...');
+      html += renderFilterSelect('supports-table', 'status', 'All Statuses', SUPPORT_STATUSES);
+      html += renderFilterSelect('supports-table', 'batchId', 'All Batches', batchIds);
+      html += `</div>`;
+      html += `</div>`;
+      html += `</div>`;
+
+      // Table placeholder
+      html += `<div id="supports-table"></div>`;
+
+      main.innerHTML = html;
+
+      // Create the data table
+      createTable('supports-table', {
+        data: supports,
+        defaultSort: 'tagId',
+        defaultSortDir: 'asc',
+        pageSize: 20,
+        columns: [
+          {
+            header: 'Support Tag ID',
+            accessor: 'tagId',
+            render: function(val, row) {
+              let dupBadge = '';
+              if (row.isDuplicate) {
+                dupBadge = ' <span class="badge badge-sm" style="background:var(--color-warning-light);color:var(--color-warning);border-color:var(--color-warning);font-size:0.6rem;">&#9888; DUP</span>';
+              }
+              return '<a href="support-detail.html?project=' + projectId + '&support=' + row.id + '">' + escapeHtml(val) + '</a>' + dupBadge;
+            }
+          },
+          {
+            header: 'Batch ID',
+            accessor: 'batchId',
+          },
+          {
+            header: 'Status',
+            accessor: 'status',
+            render: function(val) {
+              return statusBadge(val);
+            }
+          },
+          {
+            header: 'Revision',
+            accessor: 'revision',
+            render: function(val) {
+              return '<span class="badge badge-sm" style="background:var(--color-bg-subtle);color:var(--color-text-secondary);border-color:var(--color-border);">Rev ' + escapeHtml(val) + '</span>';
+            }
+          },
+          {
+            header: 'Assigned To',
+            accessor: 'assignedTo',
+            render: function(val) {
+              return escapeHtml(getUserName(val));
+            }
+          },
+          {
+            header: 'Assigned By',
+            accessor: 'assignedBy',
+            render: function(val) {
+              return escapeHtml(getUserName(val));
+            }
+          },
+          {
+            header: 'Assigned Date',
+            accessor: 'assignedAt',
+            render: function(val) {
+              return formatDate(val);
+            }
+          },
+          {
+            header: 'Submitted Date',
+            accessor: 'submittedAt',
+            render: function(val) {
+              return formatDate(val);
+            }
+          },
+          {
+            header: 'TAT (days)',
+            accessor: 'turnaroundDays',
+            render: function(val) {
+              return val !== null && val !== undefined ? val : '—';
+            }
+          },
+          {
+            header: 'DWG File',
+            accessor: 'dwgFile',
+            render: function(val) {
+              if (!val) return '—';
+              var display = val.length > 25 ? val.substring(0, 22) + '...' : val;
+              return '<span class="truncate" style="max-width:160px;display:inline-block;" title="' + escapeHtml(val) + '">' + escapeHtml(display) + '</span>';
+            }
+          }
+        ]
+      });
+    })();
+  </script>
+</body>
+</html>

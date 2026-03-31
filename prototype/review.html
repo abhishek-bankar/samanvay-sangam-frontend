@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      const role = getCurrentRole();
+      const project = getCurrentProject();
+      const projectId = project.id;
+
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Review' });
+
+      if (!checkRoleAccess(['PM', 'SME'])) return;
+
+      const allSupports = getProjectSupports(projectId);
+
+      // Section 1: Pending SME Review
+      const pendingSmeReview = allSupports.filter(s => s.status === 'Under SME Review');
+
+      // Section 2: Send to Client (PM only)
+      const smeApproved = allSupports.filter(s => s.status === 'SME Approved');
+
+      // Section 3: Client Rejections
+      const clientRejected = allSupports.filter(s => s.status === 'Client Rejected');
+
+      // Build client comment lookup
+      const clientCommentMap = {};
+      clientRejected.forEach(s => {
+        const comments = getSupportComments(s.id).filter(c => c.type === 'external');
+        if (comments.length > 0) {
+          clientCommentMap[s.id] = comments[comments.length - 1].content;
+        }
+      });
+
+      // Actionee options for reassignment
+      const actioneeOptions = project.actioneeIds.map(id => {
+        const user = USERS.find(u => u.id === id);
+        return user ? { id: user.id, name: user.name } : null;
+      }).filter(Boolean);
+
+      const main = document.getElementById('main-content');
+      let html = '';
+
+      // Page title
+      html += `<div class="section-header">
+        <h1 class="section-title">Review</h1>
+        <a href="dashboard.html?project=${projectId}" class="btn btn-secondary btn-sm">&larr; Dashboard</a>
+      </div>`;
+
+      // ========== SECTION 1: Pending SME Review ==========
+      html += `<h2 class="text-lg font-semibold mb-3">Pending SME Review</h2>`;
+
+      html += `<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-bottom:1rem">
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:var(--status-under-sme-review-text)">${pendingSmeReview.length}</div>
+          <div class="kpi-label">Awaiting Review</div>
+        </div>
+      </div>`;
+
+      html += `<div id="sme-review-table" class="mb-4"></div>`;
+
+      // ========== SECTION 2: Send to Client (PM only) ==========
+      if (role === 'PM') {
+        html += `<div class="separator"></div>`;
+        html += `<h2 class="text-lg font-semibold mb-3">Send to Client</h2>`;
+
+        html += `<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-bottom:1rem">
+          <div class="kpi-card">
+            <div class="kpi-value" style="color:var(--color-success)">${smeApproved.length}</div>
+            <div class="kpi-label">SME Approved (Ready to Send)</div>
+          </div>
+        </div>`;
+
+        html += `<div class="flex items-center gap-3 mb-3">
+          <button class="btn btn-primary" onclick="sendToClient()">Send to Client</button>
+        </div>`;
+
+        html += `<div id="send-to-client-table" class="mb-4"></div>`;
+      }
+
+      // ========== SECTION 3: Client Rejections ==========
+      if (clientRejected.length > 0) {
+        html += `<div class="separator"></div>`;
+        html += `<h2 class="text-lg font-semibold mb-3">Client Rejections</h2>`;
+
+        html += `<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-bottom:1rem">
+          <div class="kpi-card">
+            <div class="kpi-value" style="color:var(--color-error)">${clientRejected.length}</div>
+            <div class="kpi-label">Client Rejected</div>
+          </div>
+        </div>`;
+
+        html += `<div id="client-rejected-table"></div>`;
+      }
+
+      main.innerHTML = html;
+
+      // ========== Create Section 1 Table: Pending SME Review ==========
+      createTable('sme-review-table', {
+        data: pendingSmeReview,
+        selectable: false,
+        pageSize: 20,
+        defaultSort: 'tagId',
+        columns: [
+          {
+            header: 'Support Tag ID', accessor: 'tagId',
+            render: (val, row) => `<a href="support-detail.html?project=${projectId}&support=${row.id}" class="font-mono text-sm">${escapeHtml(val)}</a>`
+          },
+          { header: 'Batch', accessor: 'batchId', render: (val) => escapeHtml(val) },
+          { header: 'Actionee', accessor: 'assignedTo', render: (val) => escapeHtml(getUserName(val)) },
+          { header: 'Submitted Date', accessor: 'submittedAt', render: (val) => formatDate(val) },
+          { header: 'Revision', accessor: 'revision', render: (val) => `<span class="badge badge-sm" style="background:var(--color-bg-subtle);color:var(--color-text-secondary);border-color:var(--color-border)">Rev ${escapeHtml(val)}</span>` },
+          { header: 'DWG File', accessor: 'dwgFile', render: (val) => `<span class="text-xs font-mono">${escapeHtml(val)}</span>` },
+          {
+            header: 'Actions', accessor: 'id',
+            render: (val, row) => {
+              return `<div class="flex gap-2">
+                <button class="btn btn-success btn-sm" onclick="approveSupport('${row.id}', '${escapeHtml(row.tagId)}')">Approve</button>
+                <button class="btn btn-danger btn-sm" onclick="openRejectModal('${row.id}', '${escapeHtml(row.tagId)}')">Reject</button>
+              </div>`;
+            }
+          },
+        ],
+      });
+
+      // ========== Create Section 2 Table: Send to Client (PM only) ==========
+      if (role === 'PM') {
+        createTable('send-to-client-table', {
+          data: smeApproved,
+          selectable: true,
+          pageSize: 20,
+          defaultSort: 'tagId',
+          columns: [
+            {
+              header: 'Support Tag ID', accessor: 'tagId',
+              render: (val, row) => `<span class="font-mono text-sm">${escapeHtml(val)}</span>`
+            },
+            { header: 'Batch', accessor: 'batchId', render: (val) => escapeHtml(val) },
+            { header: 'Revision', accessor: 'revision', render: (val) => `<span class="badge badge-sm" style="background:var(--color-bg-subtle);color:var(--color-text-secondary);border-color:var(--color-border)">Rev ${escapeHtml(val)}</span>` },
+            { header: 'SME Approved Date', accessor: 'submittedAt', render: (val) => formatDate(val) },
+          ],
+        });
+      }
+
+      // ========== Create Section 3 Table: Client Rejections ==========
+      if (clientRejected.length > 0) {
+        const clientRejectedData = clientRejected.map(s => ({
+          ...s,
+          clientComment: clientCommentMap[s.id] || 'No comment provided',
+        }));
+
+        createTable('client-rejected-table', {
+          data: clientRejectedData,
+          selectable: false,
+          pageSize: 20,
+          defaultSort: 'tagId',
+          columns: [
+            {
+              header: 'Support Tag ID', accessor: 'tagId',
+              render: (val, row) => `<a href="support-detail.html?project=${projectId}&support=${row.id}" class="font-mono text-sm">${escapeHtml(val)}</a>`
+            },
+            { header: 'Batch', accessor: 'batchId', render: (val) => escapeHtml(val) },
+            {
+              header: 'Client Comment', accessor: 'clientComment',
+              render: (val) => `<div style="max-width:350px;font-size:0.75rem;color:var(--color-text-secondary);line-height:1.4">${escapeHtml(val)}</div>`
+            },
+            {
+              header: 'Actions', accessor: 'id',
+              render: (val, row) => {
+                return `<button class="btn btn-primary btn-sm" onclick="openReassignActioneeModal('${row.id}', '${escapeHtml(row.tagId)}')">Reassign to Actionee</button>`;
+              }
+            },
+          ],
+        });
+      }
+
+      // ========== Action handlers ==========
+
+      window.approveSupport = function(supportId, tagId) {
+        showToast('Support approved');
+      };
+
+      window.openRejectModal = function(supportId, tagId) {
+        const bodyHtml = `
+          <p class="text-sm mb-3">Rejecting support <strong>${tagId}</strong>. Please provide a reason:</p>
+          <div class="form-group">
+            <label class="form-label">Rejection Comment <span class="text-error">*</span></label>
+            <textarea id="reject-comment" class="form-textarea" placeholder="Describe what needs to be corrected..." required></textarea>
+          </div>
+        `;
+        const footerHtml = `
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-danger" onclick="confirmReject('${supportId}', '${tagId}')">Confirm Reject</button>
+        `;
+        showModal('Reject Support', bodyHtml, footerHtml);
+      };
+
+      window.confirmReject = function(supportId, tagId) {
+        const textarea = document.getElementById('reject-comment');
+        if (!textarea || !textarea.value.trim()) {
+          showToast('Please provide a rejection comment.', 'error');
+          return;
+        }
+        closeModal();
+        showToast('Support rejected with comment');
+      };
+
+      window.sendToClient = function() {
+        const table = window._tables['send-to-client-table'];
+        if (!table) return;
+        const selectedIds = [...table.selectedIds];
+        if (selectedIds.length === 0) {
+          showToast('Please select at least one support to send.', 'error');
+          return;
+        }
+        showToast(`${selectedIds.length} support${selectedIds.length > 1 ? 's' : ''} sent to client for review`);
+      };
+
+      window.openReassignActioneeModal = function(supportId, tagId) {
+        const bodyHtml = `
+          <p class="text-sm mb-3">Reassign rejected support <strong>${tagId}</strong> to an actionee for rework:</p>
+          <div class="form-group">
+            <label class="form-label">Actionee</label>
+            <select id="reassign-actionee-select" class="form-select">
+              <option value="">-- Select Actionee --</option>
+              ${actioneeOptions.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
+            </select>
+          </div>
+        `;
+        const footerHtml = `
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="confirmReassignActionee('${supportId}', '${tagId}')">Confirm</button>
+        `;
+        showModal('Reassign to Actionee', bodyHtml, footerHtml);
+      };
+
+      window.confirmReassignActionee = function(supportId, tagId) {
+        const select = document.getElementById('reassign-actionee-select');
+        if (!select || !select.value) {
+          showToast('Please select an actionee.', 'error');
+          return;
+        }
+        const name = getUserName(select.value);
+        closeModal();
+        showToast(`${tagId} reassigned to ${name} for rework`);
+      };
+    })();
+  </script>
+</body>
+</html>

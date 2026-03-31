@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    (function() {
+      const project = getCurrentProject();
+      const projectId = project.id;
+
+      // Render header
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Analytics' });
+
+      // Access check
+      if (!checkRoleAccess(['PM', 'SME'])) return;
+
+      const mainContent = document.getElementById('main-content');
+      const supports = getProjectSupports(projectId);
+      const batches = getProjectBatches(projectId);
+      const actioneeStats = getActioneeStats(projectId);
+      const duplicates = getDuplicateSupports().filter(s => s.projectId === projectId);
+
+      // Build page
+      let html = `
+        <h1 class="page-title">Analytics &amp; Reports</h1>
+        <p class="page-subtitle">Project performance metrics and insights for ${escapeHtml(project.name)}</p>
+        <div class="chart-grid">
+      `;
+
+      // 1. Productivity per Actionee
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">Productivity per Actionee</div>
+          <div class="chart-wrapper"><canvas id="chart-productivity"></canvas></div>
+        </div>`;
+
+      // 2. TAT Distribution
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">TAT Distribution</div>
+          <div class="chart-wrapper"><canvas id="chart-tat"></canvas></div>
+        </div>`;
+
+      // 3. Rejection Rate
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">Rejection Rate by Actionee</div>
+          <div class="chart-wrapper"><canvas id="chart-rejections"></canvas></div>
+        </div>`;
+
+      // 4. Batch Progress
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">Batch Progress</div>
+          <div class="chart-wrapper"><canvas id="chart-batch-progress"></canvas></div>
+        </div>`;
+
+      // 5. Rework Frequency
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">Rework Frequency</div>
+          <div class="chart-wrapper"><canvas id="chart-rework"></canvas></div>
+        </div>`;
+
+      // 6. Duplicate Report (table)
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">Duplicate Report</div>
+          <div style="overflow-x:auto;max-height:280px;overflow-y:auto;">`;
+
+      if (duplicates.length === 0) {
+        html += '<div class="empty-state"><div class="empty-state-text">No duplicate supports found in this project.</div></div>';
+      } else {
+        html += `
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Support Tag ID</th>
+                <th>Current Batch</th>
+                <th>Original Batch</th>
+                <th>Status</th>
+                <th>Revision</th>
+              </tr>
+            </thead>
+            <tbody>`;
+        duplicates.forEach(s => {
+          const currentBatch = BATCHES.find(b => b.id === s.batchId);
+          const originalBatch = BATCHES.find(b => b.id === s.duplicateOf);
+          html += `
+            <tr>
+              <td><a href="support-detail.html?project=${projectId}&support=${s.id}">${escapeHtml(s.tagId)}</a></td>
+              <td>${currentBatch ? escapeHtml(currentBatch.name) : escapeHtml(s.batchId)}</td>
+              <td>${originalBatch ? escapeHtml(originalBatch.name) : escapeHtml(s.duplicateOf || '—')}</td>
+              <td>${statusBadge(s.status)}</td>
+              <td><span class="badge badge-sm" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1">Rev ${escapeHtml(s.revision)}</span></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+      }
+
+      html += '</div></div>'; // close chart-card
+      html += '</div>'; // close chart-grid
+
+      mainContent.innerHTML = html;
+
+      // === Render Charts ===
+
+      // 1. Productivity per Actionee
+      const actioneeNames = Object.values(actioneeStats).map(a => a.name);
+      const actioneeCompleted = Object.values(actioneeStats).map(a => a.completed);
+      createBarChart('chart-productivity', actioneeNames, [
+        { label: 'Supports Completed', data: actioneeCompleted, color: '#059669' }
+      ]);
+
+      // 2. TAT Distribution
+      const tatRanges = ['0-3', '4-6', '7-10', '11-15', '15+'];
+      const tatCounts = [0, 0, 0, 0, 0];
+      supports.forEach(s => {
+        if (s.turnaroundDays == null) return;
+        const d = s.turnaroundDays;
+        if (d <= 3) tatCounts[0]++;
+        else if (d <= 6) tatCounts[1]++;
+        else if (d <= 10) tatCounts[2]++;
+        else if (d <= 15) tatCounts[3]++;
+        else tatCounts[4]++;
+      });
+      createHistogram('chart-tat', tatRanges, tatCounts, '#1d4ed8');
+
+      // 3. Rejection Rate by Actionee
+      const rejActioneeNames = Object.values(actioneeStats).map(a => a.name);
+      const smeRejections = [];
+      const clientRejections = [];
+      Object.values(actioneeStats).forEach(a => {
+        const mySupports = supports.filter(s => s.assignedTo === Object.keys(actioneeStats).find(k => actioneeStats[k] === a));
+        // Count by checking status
+        let smeRej = 0, clientRej = 0;
+        supports.filter(s => {
+          const userId = Object.keys(actioneeStats).find(k => actioneeStats[k] === a);
+          return s.assignedTo === userId;
+        }).forEach(s => {
+          if (s.status === 'SME Rejected' || s.status === 'Rework In Progress') smeRej++;
+          if (s.status === 'Client Rejected') clientRej++;
+        });
+        smeRejections.push(smeRej);
+        clientRejections.push(clientRej);
+      });
+      createBarChart('chart-rejections', rejActioneeNames, [
+        { label: 'SME Rejections', data: smeRejections, color: '#8b5cf6' },
+        { label: 'Client Rejections', data: clientRejections, color: '#e11d48' }
+      ]);
+
+      // 4. Batch Progress (stacked bar)
+      const batchNames = batches.map(b => b.name.length > 25 ? b.name.substring(0, 25) + '...' : b.name);
+      const completedData = [];
+      const inReviewData = [];
+      const inProgressData = [];
+      const pendingData = [];
+      batches.forEach(b => {
+        const bs = getBatchSupports(b.id);
+        completedData.push(bs.filter(s => s.status === 'Client Approved').length);
+        inReviewData.push(bs.filter(s => ['Under SME Review', 'SME Approved', 'Sent to Client', 'Client Rejected', 'SME Rejected'].includes(s.status)).length);
+        inProgressData.push(bs.filter(s => ['Assigned', 'In Progress', 'Submitted', 'Rework In Progress'].includes(s.status)).length);
+        pendingData.push(bs.filter(s => s.status === 'Unassigned').length);
+      });
+      createStackedBarChart('chart-batch-progress', batchNames, [
+        { label: 'Completed', data: completedData, color: '#059669' },
+        { label: 'In Review', data: inReviewData, color: '#8b5cf6' },
+        { label: 'In Progress', data: inProgressData, color: '#b45309' },
+        { label: 'Pending', data: pendingData, color: '#cbd5e1' }
+      ]);
+
+      // 5. Rework Frequency
+      let revA = 0, revB = 0, revCPlus = 0;
+      supports.forEach(s => {
+        if (s.revision === 'A') revA++;
+        else if (s.revision === 'B') revB++;
+        else revCPlus++;
+      });
+      createPieChart('chart-rework',
+        ['No Rework (Rev A)', '1 Rework (Rev B)', '2+ Reworks (Rev C+)'],
+        [revA, revB, revCPlus],
+        ['#059669', '#b45309', '#dc2626']
+      );
+    })();
+  </script>
+</body>
+</html>

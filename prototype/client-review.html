@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Review — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    (function() {
+      const project = getCurrentProject();
+      const projectId = project.id;
+
+      // Render header
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Client Review' });
+
+      // Access check
+      if (!checkRoleAccess(['Client'])) return;
+
+      const mainContent = document.getElementById('main-content');
+      const batches = getProjectBatches(projectId);
+      const allSupports = getProjectSupports(projectId);
+
+      // --- Batch Progress Summary ---
+      let batchCardsHtml = '<div class="section-header"><h2 class="section-title">Batch Progress Summary</h2></div>';
+      batchCardsHtml += '<div class="summary-row">';
+      batches.forEach(batch => {
+        const progress = getBatchProgress(batch.id);
+        const pct = progress.percentage;
+        const barClass = pct === 100 ? 'success' : pct >= 50 ? '' : 'warning';
+        batchCardsHtml += `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title text-sm">${escapeHtml(batch.name)}</span>
+              ${batchStatusBadge(batch.status)}
+            </div>
+            <div class="progress-bar-container mb-2">
+              <div class="progress-bar-fill ${barClass}" style="width:${pct}%"></div>
+            </div>
+            <div class="text-xs text-secondary">${progress.completed}/${progress.total} completed (${pct}%)</div>
+          </div>`;
+      });
+      batchCardsHtml += '</div>';
+
+      // --- Supports Pending Review ---
+      const pendingSupports = allSupports.filter(s => s.status === 'Sent to Client');
+
+      let pendingHtml = '<div class="section-header mt-4"><h2 class="section-title">Supports Pending Your Review</h2><span class="badge badge-lg badge-sent-to-client">' + pendingSupports.length + ' pending</span></div>';
+      pendingHtml += '<div id="pending-table"></div>';
+
+      // --- Recently Reviewed ---
+      const reviewedSupports = allSupports.filter(s => ['Client Approved', 'Client Rejected'].includes(s.status));
+
+      let reviewedHtml = '<div class="section-header mt-4"><h2 class="section-title">Recently Reviewed</h2><span class="text-sm text-secondary">' + reviewedSupports.length + ' supports</span></div>';
+      reviewedHtml += '<div id="reviewed-table"></div>';
+
+      mainContent.innerHTML = batchCardsHtml + pendingHtml + reviewedHtml;
+
+      // --- Pending Table ---
+      createTable('pending-table', {
+        data: pendingSupports,
+        pageSize: 20,
+        defaultSort: 'tagId',
+        columns: [
+          {
+            header: 'Support Tag ID',
+            accessor: 'tagId',
+            render: (val, row) => `<a href="support-detail.html?project=${projectId}&support=${row.id}">${escapeHtml(val)}</a>`
+          },
+          {
+            header: 'Batch',
+            accessor: 'batchId',
+            render: (val) => {
+              const batch = BATCHES.find(b => b.id === val);
+              return batch ? escapeHtml(batch.name) : escapeHtml(val);
+            }
+          },
+          {
+            header: 'Revision',
+            accessor: 'revision',
+            render: (val) => `<span class="badge badge-sm" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1">Rev ${escapeHtml(val)}</span>`
+          },
+          {
+            header: 'DWG File',
+            accessor: 'dwgFile',
+            render: (val) => `<span class="font-mono text-xs">${escapeHtml(val)}</span>`
+          },
+          {
+            header: 'Actions',
+            accessor: 'id',
+            render: (val, row) => `
+              <div class="flex gap-2">
+                <button class="btn btn-success btn-sm" onclick="approveSupport('${row.id}', '${escapeHtml(row.tagId)}')">Approve</button>
+                <button class="btn btn-danger btn-sm" onclick="rejectSupport('${row.id}', '${escapeHtml(row.tagId)}')">Reject</button>
+              </div>`
+          }
+        ]
+      });
+
+      // --- Reviewed Table ---
+      createTable('reviewed-table', {
+        data: reviewedSupports,
+        pageSize: 20,
+        defaultSort: 'tagId',
+        columns: [
+          {
+            header: 'Support Tag ID',
+            accessor: 'tagId',
+            render: (val, row) => `<a href="support-detail.html?project=${projectId}&support=${row.id}">${escapeHtml(val)}</a>`
+          },
+          {
+            header: 'Batch',
+            accessor: 'batchId',
+            render: (val) => {
+              const batch = BATCHES.find(b => b.id === val);
+              return batch ? escapeHtml(batch.name) : escapeHtml(val);
+            }
+          },
+          {
+            header: 'Revision',
+            accessor: 'revision',
+            render: (val) => `<span class="badge badge-sm" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1">Rev ${escapeHtml(val)}</span>`
+          },
+          {
+            header: 'DWG File',
+            accessor: 'dwgFile',
+            render: (val) => `<span class="font-mono text-xs">${escapeHtml(val)}</span>`
+          },
+          {
+            header: 'Status',
+            accessor: 'status',
+            render: (val) => statusBadge(val)
+          }
+        ]
+      });
+    })();
+
+    // --- Action Handlers ---
+    function approveSupport(supportId, tagId) {
+      showToast('Support ' + tagId + ' approved');
+    }
+
+    function rejectSupport(supportId, tagId) {
+      showModal(
+        'Reject Support — ' + tagId,
+        `<div class="form-group">
+          <label class="form-label">Rejection Comment <span class="text-error">*</span></label>
+          <textarea id="reject-comment" class="form-textarea" placeholder="Please provide a reason for rejection..." required></textarea>
+          <div class="form-hint">This comment will be shared with the engineering team.</div>
+        </div>`,
+        `<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-danger" onclick="confirmReject('${supportId}', '${tagId}')">Confirm Rejection</button>`
+      );
+    }
+
+    function confirmReject(supportId, tagId) {
+      const comment = document.getElementById('reject-comment').value.trim();
+      if (!comment) {
+        document.getElementById('reject-comment').style.borderColor = 'var(--color-error)';
+        document.getElementById('reject-comment').focus();
+        return;
+      }
+      closeModal();
+      showToast('Support ' + tagId + ' rejected with comment');
+    }
+  </script>
+</body>
+</html>

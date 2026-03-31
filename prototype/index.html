@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      const role = getCurrentRole();
+      const currentUser = getMockUserForRole(role);
+
+      // Render header (no project banner or tabs on listing page)
+      renderHeader();
+
+      // Filter projects based on role
+      let projects;
+      switch (role) {
+        case 'Client':
+          projects = PROJECTS.filter(p => p.clientUserId === currentUser.id);
+          break;
+        case 'Actionee':
+          projects = PROJECTS.filter(p => p.actioneeIds.includes(currentUser.id));
+          break;
+        case 'PM':
+        case 'SME':
+        default:
+          projects = PROJECTS;
+          break;
+      }
+
+      // Build page content
+      const main = document.getElementById('main-content');
+      let html = '';
+
+      html += `<h1 class="page-title">Projects</h1>`;
+      html += `<p class="page-subtitle">${projects.length} project${projects.length !== 1 ? 's' : ''} visible for your role</p>`;
+
+      if (projects.length === 0) {
+        html += `
+          <div class="empty-state">
+            <div class="empty-state-icon">&#128194;</div>
+            <div class="empty-state-text">No projects found for your role.</div>
+          </div>`;
+        main.innerHTML = html;
+        return;
+      }
+
+      html += '<div class="card-grid">';
+
+      projects.forEach(project => {
+        const batches = getProjectBatches(project.id);
+        const supports = getProjectSupports(project.id);
+        const statusCounts = getStatusCounts(supports);
+        const totalSupports = supports.length;
+
+        // Calculate overall progress (Client Approved / total)
+        const approvedCount = statusCounts['Client Approved'] || 0;
+        const progressPct = totalSupports > 0 ? Math.round((approvedCount / totalSupports) * 100) : 0;
+
+        // Determine progress bar color class
+        let progressClass = '';
+        if (progressPct >= 75) progressClass = 'success';
+        else if (progressPct >= 40) progressClass = 'warning';
+
+        // Phase badge
+        const phaseBadgeStyle = 'background:#dbeafe;color:#1d4ed8;border-color:#93c5fd';
+
+        html += `
+          <a href="dashboard.html?project=${project.id}" class="card-link">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">${escapeHtml(project.name)}</span>
+                <span class="badge badge-sm" style="${phaseBadgeStyle}">${escapeHtml(project.phase)}</span>
+              </div>
+              <div class="card-subtitle mb-3">${escapeHtml(project.client)}</div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-secondary">Status</span>
+                <span class="badge badge-sm ${project.status === 'Active' ? 'badge-sme-approved' : 'badge-assigned'}">${escapeHtml(project.status)}</span>
+              </div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-secondary">Batches</span>
+                <span class="text-sm font-semibold">${batches.length}</span>
+              </div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-secondary">Total Supports</span>
+                <span class="text-sm font-semibold">${totalSupports}</span>
+              </div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-secondary">Progress (Client Approved)</span>
+                <span class="text-xs font-semibold">${progressPct}%</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill ${progressClass}" style="width:${progressPct}%"></div>
+              </div>
+            </div>
+          </a>`;
+      });
+
+      html += '</div>';
+      main.innerHTML = html;
+    })();
+  </script>
+</body>
+</html>

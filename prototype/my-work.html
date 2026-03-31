@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Work — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      const role = getCurrentRole();
+      const project = getCurrentProject();
+      const projectId = project.id;
+
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'My Work' });
+
+      if (!checkRoleAccess(['Actionee'])) return;
+
+      // Mock current user as ACTIONEES[0] (USR-006, Amit Kumar)
+      const currentUser = ACTIONEES[0];
+      const allSupports = getProjectSupports(projectId);
+      const mySupports = allSupports.filter(s => s.assignedTo === currentUser.id);
+
+      // Compute summary counts
+      const totalAssigned = mySupports.length;
+      const inProgressCount = mySupports.filter(s => s.status === 'In Progress').length;
+      const submittedCount = mySupports.filter(s => ['Submitted', 'Under SME Review'].includes(s.status)).length;
+      const rejectedCount = mySupports.filter(s => ['SME Rejected', 'Rework In Progress'].includes(s.status)).length;
+
+      // Filterable statuses
+      const filterStatuses = ['Assigned', 'In Progress', 'Submitted', 'Under SME Review', 'SME Rejected', 'Rework In Progress'];
+
+      // Build rejection comment lookup: supportId -> latest internal comment
+      const rejectionCommentMap = {};
+      mySupports.filter(s => ['SME Rejected', 'Rework In Progress'].includes(s.status)).forEach(s => {
+        const comments = getSupportComments(s.id).filter(c => c.type === 'internal');
+        if (comments.length > 0) {
+          // Take the latest (last) internal comment
+          rejectionCommentMap[s.id] = comments[comments.length - 1].content;
+        }
+      });
+
+      const main = document.getElementById('main-content');
+      let html = '';
+
+      // Page title
+      html += `<div class="section-header">
+        <h1 class="section-title">My Work</h1>
+        <span class="text-sm text-secondary">Logged in as <strong>${escapeHtml(currentUser.name)}</strong></span>
+      </div>`;
+
+      // Summary KPI cards
+      html += `<div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:var(--color-primary)">${totalAssigned}</div>
+          <div class="kpi-label">Total Assigned</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:var(--color-warning)">${inProgressCount}</div>
+          <div class="kpi-label">In Progress</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:var(--color-info)">${submittedCount}</div>
+          <div class="kpi-label">Submitted</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color:var(--color-error)">${rejectedCount}</div>
+          <div class="kpi-label">Rejected (Rework)</div>
+        </div>
+      </div>`;
+
+      // Filter toolbar
+      html += `<div class="flex items-center gap-3 mb-3" style="flex-wrap:wrap">
+        <select id="status-filter" class="form-select" style="max-width:220px" onchange="applyStatusFilter(this.value)">
+          <option value="all">All Statuses</option>
+          ${filterStatuses.map(s => `<option value="${s}">${s}</option>`).join('')}
+        </select>
+        <input type="text" class="form-input" style="max-width:250px" placeholder="Search supports..." oninput="window._tables['my-work-table'].setSearch(this.value)">
+      </div>`;
+
+      // Table
+      html += `<div id="my-work-table"></div>`;
+
+      main.innerHTML = html;
+
+      // Prepare table data with extra fields for rendering
+      const tableData = mySupports.map(s => ({
+        ...s,
+        rejectionComment: rejectionCommentMap[s.id] || null,
+      }));
+
+      // Create DataTable
+      createTable('my-work-table', {
+        data: tableData,
+        selectable: false,
+        pageSize: 20,
+        defaultSort: 'tagId',
+        columns: [
+          {
+            header: 'Support Tag ID', accessor: 'tagId',
+            render: (val, row) => `<a href="support-detail.html?project=${projectId}&support=${row.id}" class="font-mono text-sm">${escapeHtml(val)}</a>`
+          },
+          { header: 'Batch ID', accessor: 'batchId', render: (val) => escapeHtml(val) },
+          { header: 'Status', accessor: 'status', render: (val) => statusBadge(val) },
+          { header: 'Revision', accessor: 'revision', render: (val) => `<span class="badge badge-sm" style="background:var(--color-bg-subtle);color:var(--color-text-secondary);border-color:var(--color-border)">Rev ${escapeHtml(val)}</span>` },
+          { header: 'Assigned Date', accessor: 'assignedAt', render: (val) => formatDate(val) },
+          { header: 'DWG File', accessor: 'dwgFile', render: (val) => `<span class="text-xs font-mono">${escapeHtml(val)}</span>` },
+          {
+            header: 'Actions', accessor: 'id',
+            render: (val, row) => {
+              let actionHtml = '';
+
+              if (row.status === 'Assigned') {
+                actionHtml += `<button class="btn btn-primary btn-sm" onclick="startWork('${row.tagId}')">Start Work</button>`;
+              } else if (row.status === 'In Progress') {
+                actionHtml += `<button class="btn btn-success btn-sm" onclick="submitWork('${row.tagId}')">Submit</button>`;
+              } else if (['SME Rejected', 'Rework In Progress'].includes(row.status)) {
+                actionHtml += `<div style="max-width:280px">
+                  <div class="flex items-center gap-1 mb-1">
+                    <span style="color:var(--color-error);font-weight:600;font-size:0.75rem">Rework needed</span>
+                  </div>
+                  ${row.rejectionComment ? `<div style="background:var(--color-error-light);border:1px solid #fca5a5;border-radius:var(--radius-sm);padding:0.375rem 0.5rem;font-size:0.6875rem;color:var(--color-text-secondary);line-height:1.4">${escapeHtml(row.rejectionComment)}</div>` : ''}
+                </div>`;
+              } else {
+                actionHtml = '<span class="text-muted">—</span>';
+              }
+
+              return actionHtml;
+            }
+          },
+        ],
+      });
+
+      // Filter function
+      window.applyStatusFilter = function(value) {
+        window._tables['my-work-table'].setFilter('status', value);
+      };
+
+      // Action handlers
+      window.startWork = function(tagId) {
+        showToast('Work started on ' + tagId);
+      };
+
+      window.submitWork = function(tagId) {
+        showToast('Support submitted for review');
+      };
+    })();
+  </script>
+</body>
+</html>

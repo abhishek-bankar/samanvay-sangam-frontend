@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Batch — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      var role = getCurrentRole();
+      var projectId = getCurrentProjectId();
+
+      // Render header
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Batches' });
+
+      // Access check - PM and Client only
+      if (!checkRoleAccess(['PM', 'Client'])) return;
+
+      var main = document.getElementById('main-content');
+      var currentUser = getMockUserForRole(role);
+      var html = '';
+
+      // Back link
+      html += '<div class="mb-4"><a href="batches.html?project=' + projectId + '" class="text-sm text-secondary">&larr; Back to Batches</a></div>';
+
+      // Form card
+      html += '<div class="card" style="max-width:640px">';
+      html += '<div class="card-header"><span class="card-title">Create New Batch</span></div>';
+      html += '<div class="separator"></div>';
+
+      html += '<form id="batch-form">';
+
+      // Batch Name
+      html += '<div class="form-group">';
+      html += '<label class="form-label" for="batch-name">Batch Name</label>';
+      html += '<input type="text" id="batch-name" class="form-input" placeholder="e.g. Batch 5 — Area D Pipe Supports" required>';
+      html += '</div>';
+
+      // On behalf of (PM only) / auto-set for Client
+      if (role === 'PM') {
+        html += '<div class="form-group">';
+        html += '<label class="form-label" for="client-select">On behalf of</label>';
+        html += '<select id="client-select" class="form-select" required>';
+        html += '<option value="">Select a client...</option>';
+        CLIENTS.forEach(function(client) {
+          html += '<option value="' + client.id + '">' + escapeHtml(client.name) + ' (' + escapeHtml(client.company) + ')</option>';
+        });
+        html += '</select>';
+        html += '<span class="form-hint">Select the client who submitted this batch</span>';
+        html += '</div>';
+      } else {
+        // Client role - show as read-only
+        html += '<div class="form-group">';
+        html += '<label class="form-label">Submitted By</label>';
+        html += '<input type="text" class="form-input" value="' + escapeHtml(currentUser.name) + ' (' + escapeHtml(currentUser.company || '') + ')" disabled>';
+        html += '</div>';
+      }
+
+      // Support List upload
+      html += '<div class="form-group">';
+      html += '<label class="form-label" for="support-file">Support List (Excel/CSV)</label>';
+      html += '<input type="file" id="support-file" class="form-input" accept=".xlsx,.xls,.csv" style="padding:0.375rem">';
+      html += '<span class="form-hint">Upload the support tag list extracted from the Navisworks model</span>';
+      html += '</div>';
+
+      // Navisworks Model upload
+      html += '<div class="form-group">';
+      html += '<label class="form-label" for="model-file">Navisworks Model</label>';
+      html += '<input type="file" id="model-file" class="form-input" accept=".nwd,.nwf,.nwc" style="padding:0.375rem">';
+      html += '<span class="form-hint">Upload the Navisworks model file for reference</span>';
+      html += '</div>';
+
+      // Submit button
+      html += '<div class="flex justify-end mt-4">';
+      html += '<button type="submit" class="btn btn-primary btn-lg">Upload &amp; Check for Duplicates</button>';
+      html += '</div>';
+
+      html += '</form>';
+
+      // Duplicate check results (hidden initially)
+      html += '<div id="duplicate-results" class="hidden">';
+      html += '<div class="separator"></div>';
+      html += '<h3 class="card-title mb-3">Duplicate Check Results</h3>';
+      html += '<p class="text-sm text-secondary mb-3">The following supports were flagged as potential duplicates from previous batches:</p>';
+
+      // Mock 3 flagged supports
+      var mockDuplicates = [
+        { tagId: 'SP-A-PR-001', originalBatch: 'B-2025-001', status: 'Client Approved', revision: 'A' },
+        { tagId: 'SP-A-PR-015', originalBatch: 'B-2025-001', status: 'Sent to Client', revision: 'B' },
+        { tagId: 'SP-B-EQ-022', originalBatch: 'B-2025-002', status: 'Under SME Review', revision: 'A' }
+      ];
+
+      html += '<div class="flex flex-col gap-2 mb-4">';
+      mockDuplicates.forEach(function(dup) {
+        html += '<div class="duplicate-flag">';
+        html += '<span class="duplicate-flag-icon">&#9888;</span>';
+        html += '<div>';
+        html += '<div class="font-semibold">' + escapeHtml(dup.tagId) + '</div>';
+        html += '<div class="text-xs text-secondary mt-1">Original Batch: <strong>' + escapeHtml(dup.originalBatch) + '</strong> &middot; Current Status: <strong>' + escapeHtml(dup.status) + '</strong> &middot; Revision: <strong>' + escapeHtml(dup.revision) + '</strong></div>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // Action buttons
+      html += '<div class="flex gap-3 justify-end">';
+      html += '<button type="button" class="btn btn-warning btn-lg" onclick="createBatch(true)">Create Batch (Skip Duplicates)</button>';
+      html += '<button type="button" class="btn btn-primary btn-lg" onclick="createBatch(false)">Create Batch (Include All)</button>';
+      html += '</div>';
+
+      html += '</div>'; // end duplicate-results
+
+      html += '</div>'; // end card
+
+      main.innerHTML = html;
+
+      // Form submit handler — show duplicate results
+      document.getElementById('batch-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var name = document.getElementById('batch-name').value.trim();
+        if (!name) {
+          showToast('Please enter a batch name.', 'error');
+          return;
+        }
+        if (role === 'PM') {
+          var clientSelect = document.getElementById('client-select');
+          if (!clientSelect.value) {
+            showToast('Please select a client.', 'error');
+            return;
+          }
+        }
+        // Show duplicate results
+        document.getElementById('duplicate-results').classList.remove('hidden');
+        document.getElementById('duplicate-results').scrollIntoView({ behavior: 'smooth' });
+      });
+    })();
+
+    function createBatch(skipDuplicates) {
+      showToast('Batch created successfully!', 'success');
+      setTimeout(function() {
+        window.location.href = 'batches.html?project=' + getCurrentProjectId();
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

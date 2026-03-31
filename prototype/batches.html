@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batches — Samanvay SANGAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div id="app-header"></div>
+    <main class="main-content" id="main-content"></main>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function() {
+      const role = getCurrentRole();
+      const projectId = getCurrentProjectId();
+
+      // Render header with project banner and tabs
+      renderHeader({ showProjectBanner: true, showTabs: true, activeTab: 'Batches' });
+
+      // Access check
+      if (!checkRoleAccess(['PM', 'SME', 'Client'])) return;
+
+      const batches = getProjectBatches(projectId);
+      const main = document.getElementById('main-content');
+
+      // Page header
+      let html = '<div class="section-header">';
+      html += '<div>';
+      html += '<h1 class="page-title">Batches</h1>';
+      html += `<p class="page-subtitle">${batches.length} batch${batches.length !== 1 ? 'es' : ''} in this project</p>`;
+      html += '</div>';
+      if (role === 'PM' || role === 'Client') {
+        html += `<a href="batch-new.html?project=${projectId}" class="btn btn-primary">+ New Batch</a>`;
+      }
+      html += '</div>';
+
+      // Toolbar: filter + search
+      html += '<div class="card mb-4" style="padding:0">';
+      html += '<div class="table-toolbar">';
+      html += '<div class="table-toolbar-left">';
+      html += `<select class="form-select" style="max-width:180px" onchange="window._tables['batches-table'].setFilter('status', this.value)">
+        <option value="all">All Statuses</option>
+        ${BATCH_STATUSES.map(s => `<option value="${s}">${s}</option>`).join('')}
+      </select>`;
+      html += '</div>';
+      html += '<div class="table-toolbar-right">';
+      html += `<input type="text" class="form-input" style="max-width:250px" placeholder="Search batches..." oninput="window._tables['batches-table'].setSearch(this.value)">`;
+      html += '</div>';
+      html += '</div>';
+
+      // Table container
+      html += '<div id="batches-table"></div>';
+      html += '</div>';
+
+      main.innerHTML = html;
+
+      // Build table columns
+      const isClient = role === 'Client';
+      const columns = [
+        {
+          header: 'Batch ID',
+          accessor: 'id',
+          render: function(val, row) {
+            return `<a href="batch-detail.html?project=${projectId}&batch=${val}">${escapeHtml(val)}</a>`;
+          }
+        },
+        {
+          header: 'Name',
+          accessor: 'name',
+          render: function(val) { return escapeHtml(val); }
+        },
+        {
+          header: 'Status',
+          accessor: 'status',
+          render: function(val) { return batchStatusBadge(val); }
+        },
+        {
+          header: 'Supports',
+          accessor: 'supportCount',
+          render: function(val) { return val; }
+        },
+        {
+          header: 'Progress',
+          accessor: 'id',
+          render: function(val, row) {
+            var progress = getBatchProgress(row.id);
+            var pct = progress.percentage;
+            var cls = pct >= 75 ? 'success' : (pct >= 40 ? 'warning' : '');
+            return '<div style="min-width:120px">' +
+              '<div class="flex items-center justify-between mb-1">' +
+              '<span class="text-xs text-secondary">' + progress.completed + '/' + progress.total + '</span>' +
+              '<span class="text-xs font-semibold">' + pct + '%</span>' +
+              '</div>' +
+              '<div class="progress-bar-container">' +
+              '<div class="progress-bar-fill ' + cls + '" style="width:' + pct + '%"></div>' +
+              '</div></div>';
+          }
+        },
+        {
+          header: 'Submitted By',
+          accessor: 'submittedBy',
+          render: function(val) { return escapeHtml(getUserName(val)); }
+        },
+        {
+          header: 'Submitted Date',
+          accessor: 'submittedAt',
+          render: function(val) { return formatDate(val); }
+        }
+      ];
+
+      // Create data table
+      createTable('batches-table', {
+        columns: columns,
+        data: batches,
+        defaultSort: 'submittedAt',
+        defaultSortDir: 'desc',
+        pageSize: 20
+      });
+    })();
+  </script>
+</body>
+</html>
