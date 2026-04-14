@@ -1,49 +1,22 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { config } from "@/lib/config";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
-
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground">
+      <h1 className="text-4xl font-bold tracking-tight">Hello SANGAM</h1>
+      <p className="mt-4 text-muted-foreground">
+        Samanvay SANGAM Desktop — Tauri + React + TypeScript
+      </p>
+      <div className="mt-8 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+        <p className="text-sm">
+          <span className="font-medium">Drive Root:</span>{" "}
+          {config.driveRoot || "Not configured"}
+        </p>
+        <p className="mt-2 text-sm">
+          <span className="font-medium">Frappe URL:</span>{" "}
+          {config.frappeUrl || "Not configured"}
+        </p>
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
