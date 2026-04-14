@@ -18,21 +18,11 @@ interface FrappeDocResponse<T> {
   data: T;
 }
 
-function getStoredToken(): string {
-  const token = localStorage.getItem("frappe_token");
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-  return token;
-}
-
 async function frappeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = getStoredToken();
-
   const response = await fetch(`${config.frappeUrl}${endpoint}`, {
     ...options,
+    credentials: "include",
     headers: {
-      Authorization: `token ${token}`,
       "Content-Type": "application/json",
       ...options.headers,
     },
