@@ -1,6 +1,6 @@
 # Story 1.2: Authentication & App Shell
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -239,9 +239,26 @@ src/
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- Initially implemented session/cookie auth with credentials: "include" — failed in Tauri webview due to SameSite=Lax + HttpOnly on cross-origin
+- Switched to token-based auth in Story 2.1 via custom backend endpoint `samanvay_sangam_backend.api.login`
+- CORS configured on Frappe: `bench --site samanvay-sangam set-config allow_cors "*"`
 
 ### Completion Notes List
+- Task 1: SANGAM roles created as Frappe fixtures (hooks.py + role.json)
+- Task 2: Auth types and token storage in localStorage
+- Task 3: Login API integration (later replaced with token auth in Story 2.1)
+- Task 4: Auth context with role detection
+- Task 5: Login page with shadcn/ui Card, Input, Button
+- Task 6: App shell with collapsible sidebar, role-filtered menu items
+- Task 7: React Router with route guards, placeholder pages
 
 ### File List
+- src/features/auth/ (new) — types, storage, context, LoginPage, useLogin
+- src/app/ (new) — AppShell, Sidebar, Header, ProtectedRoute, ProjectSelector, router
+- src/app/sidebar-menu.ts (new) — role-based menu config
+- src/App.tsx (modified) — QueryClient + AuthProvider + router
+- src/lib/api/frappe-client.ts (modified) — auth storage integration
+- src/components/ui/ (new) — card, input, label from shadcn

@@ -1,6 +1,6 @@
 # Story 2.1: Core DocTypes & Project Creation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -40,27 +40,28 @@ so that I have a place to organize batches and support drawings.
   - [x] tat_hours is read-only
   - [x] Set permissions: SANGAM PM (full CRUD), SANGAM SME (read, write), SANGAM QC (read, write), SANGAM Actionee (read, write)
 
-- [ ] Task 4: Frontend — Project context provider (AC: #9)
-  - [ ] Create `src/features/projects/types.ts` with Project TypeScript interface
-  - [ ] Create `src/features/projects/project-context.tsx` — React context for selected project (selectedProject, setProject)
-  - [ ] Create `src/features/projects/hooks/useProjects.ts` — TanStack Query hook to fetch project list
-  - [ ] Create `src/features/projects/index.ts` — public exports
-  - [ ] Wrap app in ProjectProvider in `src/App.tsx`
+- [x] Task 4: Frontend — Project context provider (AC: #9)
+  - [x] Create `src/features/projects/types.ts` with Project TypeScript interface
+  - [x] Create `src/features/projects/project-context.tsx` — React context for selected project (selectedProject, setProject)
+  - [x] Create `src/features/projects/hooks/useProjects.ts` — TanStack Query hook to fetch project list
+  - [x] Create `src/features/projects/index.ts` — public exports
+  - [x] Wrap app in ProjectProvider in `src/App.tsx`
 
-- [ ] Task 5: Frontend — Project creation page (AC: #5, #6, #10)
-  - [ ] Create `src/features/projects/components/CreateProjectPage.tsx` — form with project_name, client fields
-  - [ ] On submit: call Frappe API to create Project doc (`POST /api/v2/document/Project`)
-  - [ ] On success: create folder at `{SANGAM_DRIVE_ROOT}/{project_name}` using Tauri FS `mkdir`
-  - [ ] Update project doc with `folder_path` via `PATCH /api/v2/document/Project/{name}`
-  - [ ] On folder creation failure: show raw error, do NOT silently continue
-  - [ ] Add route `/projects/new` to router
+- [x] Task 5: Frontend — Project creation page (AC: #5, #6, #10)
+  - [x] Create `src/features/projects/components/CreateProjectPage.tsx` — form with project_name, client, status fields
+  - [x] On submit: call Frappe API to create Project doc (`POST /api/v2/document/Project`)
+  - [x] On success: create folder at `{SANGAM_DRIVE_ROOT}/{project_name}` using Tauri FS `mkdir`
+  - [x] Update project doc with `folder_path` via `PATCH /api/v2/document/Project/{name}`
+  - [x] On folder creation failure: show raw error, do NOT silently continue
+  - [x] Add route `/projects/new` to router
 
-- [ ] Task 6: Frontend — Project list and selector (AC: #7, #8)
-  - [ ] Create `src/features/projects/components/ProjectListPage.tsx` — list of all projects with name, client, status
-  - [ ] Update `src/app/ProjectSelector.tsx` to fetch real projects and allow selection
-  - [ ] On project selection, store in project context and navigate to dashboard
-  - [ ] Add route `/projects` to router
-  - [ ] Update router — root `/` shows ProjectSelector, project-scoped routes nested under selected project
+- [x] Task 6: Frontend — Project list and selector (AC: #7, #8)
+  - [x] Create `src/features/projects/components/ProjectListPage.tsx` — DataTable with search, edit dialog, delete confirmation
+  - [x] Update `src/app/ProjectSelector.tsx` to fetch real projects and redirect to list
+  - [x] On project selection, store in project context and navigate to dashboard
+  - [x] Add route `/projects` to router
+  - [x] Add Projects menu item to sidebar
+  - [x] Header shows selected project name + client with back arrow to switch projects
 
 ## Dev Notes
 
@@ -240,23 +241,44 @@ Claude Opus 4.6 (1M context)
 - Tauri FS scope for mkdir — needed `**` wildcard
 
 ### Completion Notes List
-- Task 1-3: DocTypes created manually in Frappe UI (Project, Batch, Support)
-- Task 4: Project context provider with localStorage persistence
-- Task 5: Project creation page with Tauri FS folder creation
-- Task 6: Project list and selector with real Frappe data
+- Task 1-3: DocTypes created manually in Frappe UI (Project, Batch, Support) with hash naming
+- Task 4: Project context provider with localStorage persistence for selected project
+- Task 5: Project creation page with status field, Tauri FS folder creation on shared drive
+- Task 6: Project list as DataTable with search, edit dialog, delete confirmation, status select
+- Roles persisted in localStorage — sidebar works on app restart
+- Projects menu item added to sidebar
+- Header shows selected project name + client with back arrow navigation
+- Button cursor-pointer added globally via base component
+- Sidebar active item style improved (bg-primary with contrast)
 
 ### File List
-- .gitignore (modified)
-- eslint.config.mjs (new)
-- knip.json (new)
-- package.json (modified)
-- src-tauri/capabilities/default.json (modified)
-- src/App.tsx (modified)
-- src/main.tsx (modified)
-- src/lib/api/frappe-client.ts (modified)
-- src/features/auth/ (modified — token auth)
-- src/features/projects/ (new)
-- src/app/ProjectSelector.tsx (modified)
-- src/app/router.tsx (modified)
-- src/app/sidebar-menu.ts (modified)
-- samanvay_sangam_backend/api.py (new — backend repo)
+- .gitignore (modified) — added Sangam Server/
+- eslint.config.mjs (new) — ESLint flat config with sonarjs, unicorn, no-relative-imports
+- knip.json (new) — dead code detection
+- package.json (modified) — quality scripts, eslint/knip deps
+- src-tauri/capabilities/default.json (modified) — FS scope with ** wildcard
+- src/App.tsx (modified) — ProjectProvider added
+- src/main.tsx (modified) — absolute imports
+- src/lib/api/frappe-client.ts (modified) — token auth, refactored buildListQuery
+- src/features/auth/auth-storage.ts (modified) — persist roles in localStorage
+- src/features/auth/auth-context.tsx (modified) — load roles from storage, simplified
+- src/features/auth/hooks/useLogin.ts (modified) — custom login endpoint, saves roles
+- src/features/auth/index.ts (modified) — new exports
+- src/features/auth/components/LoginPage.tsx (modified) — autocomplete, passes roles
+- src/features/projects/types.ts (new) — Project interface, PROJECT_STATUSES
+- src/features/projects/project-context.tsx (new) — selected project context
+- src/features/projects/hooks/useProjects.ts (new) — CRUD hooks
+- src/features/projects/components/CreateProjectPage.tsx (new) — create form with status
+- src/features/projects/components/ProjectListPage.tsx (new) — DataTable with search, edit, delete
+- src/features/projects/index.ts (new) — public exports
+- src/app/ProjectSelector.tsx (modified) — redirects to list or create prompt
+- src/app/router.tsx (modified) — project routes
+- src/app/sidebar-menu.ts (modified) — Projects menu item, role constants
+- src/app/Sidebar.tsx (modified) — Briefcase icon, improved active style
+- src/app/Header.tsx (modified) — selected project display, back arrow, clear project on logout
+- src/components/ui/button.tsx (modified) — cursor-pointer globally
+- src/components/ui/table.tsx (new) — shadcn Table
+- src/components/ui/dialog.tsx (new) — shadcn Dialog
+- src/components/ui/alert-dialog.tsx (new) — shadcn AlertDialog
+- src/components/ui/select.tsx (new) — shadcn Select
+- samanvay_sangam_backend/api.py (new — backend repo) — custom login endpoint
