@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
+  Briefcase,
   LayoutDashboard,
   ClipboardList,
   FileText,
@@ -19,6 +20,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { getVisibleMenuItems } from "@/app/sidebar-menu";
 
 const ICON_MAP: Record<string, React.ElementType> = {
+  Briefcase,
   LayoutDashboard,
   ClipboardList,
   FileText,
@@ -64,8 +66,8 @@ export function Sidebar() {
                 cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+                    ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent",
                   collapsed && "justify-center px-2",
                 )
               }

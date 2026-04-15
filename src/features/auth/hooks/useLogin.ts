@@ -31,11 +31,11 @@ async function loginToFrappe({ email, password }: LoginCredentials) {
   const data: LoginApiResponse = await res.json();
   const { token, user, full_name, roles } = data.message;
 
-  saveAuth(token, user, full_name);
-
   const sangamRoles = roles.filter((r): r is SangamRole =>
     (SANGAM_ROLES as readonly string[]).includes(r),
   );
+
+  saveAuth(token, user, full_name, sangamRoles);
 
   return { user, fullName: full_name, token, roles: sangamRoles };
 }

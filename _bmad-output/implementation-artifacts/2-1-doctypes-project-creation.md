@@ -215,12 +215,48 @@ src/
 - [Story 1.2](_bmad-output/implementation-artifacts/1-2-auth-app-shell.md) — Auth context, app shell, router patterns
 - [Tauri FS Plugin](https://github.com/tauri-apps/plugins-workspace/tree/v2/plugins/fs) — mkdir, exists, readDir
 
+## Dev Notes — Adhoc Changes (Not in Original Story)
+
+### Token Auth via Custom Backend Endpoint
+Session/cookie auth failed in Tauri webview (SameSite=Lax + HttpOnly blocks cross-origin AJAX). Created custom whitelisted method `samanvay_sangam_backend.api.login` that validates email+password and returns API token + user info + roles in one call. All API calls now use `Authorization: token api_key:api_secret`.
+
+### Quality Tooling
+Added ESLint (sonarjs, unicorn, no-relative-import-paths), Knip (dead code), and `npm run quality` script. Not in original story but needed for code quality.
+
+### Tauri FS Scope
+`allow-mkdir` and other FS permissions needed explicit `{ "path": "**" }` scope to allow creating folders at arbitrary paths (shared drive root).
+
+### Login autocomplete
+Added `name` and `autoComplete` attributes to login form inputs for browser password manager support.
+
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- Session auth → token auth migration (cookie SameSite issue)
+- Encryption key issue with generate_keys — resolved via bench execute
+- Tauri FS scope for mkdir — needed `**` wildcard
 
 ### Completion Notes List
+- Task 1-3: DocTypes created manually in Frappe UI (Project, Batch, Support)
+- Task 4: Project context provider with localStorage persistence
+- Task 5: Project creation page with Tauri FS folder creation
+- Task 6: Project list and selector with real Frappe data
 
 ### File List
+- .gitignore (modified)
+- eslint.config.mjs (new)
+- knip.json (new)
+- package.json (modified)
+- src-tauri/capabilities/default.json (modified)
+- src/App.tsx (modified)
+- src/main.tsx (modified)
+- src/lib/api/frappe-client.ts (modified)
+- src/features/auth/ (modified — token auth)
+- src/features/projects/ (new)
+- src/app/ProjectSelector.tsx (modified)
+- src/app/router.tsx (modified)
+- src/app/sidebar-menu.ts (modified)
+- samanvay_sangam_backend/api.py (new — backend repo)

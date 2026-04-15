@@ -17,8 +17,29 @@ export function useProjects() {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { project_name: string; client: string }) =>
+    mutationFn: (data: Partial<Project>) =>
       frappe.createDoc<Project>("Project", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useUpdateProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, data }: { name: string; data: Partial<Project> }) =>
+      frappe.updateDoc<Project>("Project", name, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => frappe.deleteDoc("Project", name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },

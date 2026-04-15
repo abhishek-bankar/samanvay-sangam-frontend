@@ -3,6 +3,8 @@ import {
   getStoredToken,
   getStoredUser,
   getStoredFullName,
+  getStoredRoles,
+  saveAuth,
   clearAuth,
 } from "@/features/auth/auth-storage";
 import type { AuthState, SangamRole } from "@/features/auth/types";
@@ -23,11 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!token && !!user,
       user,
       fullName,
-      roles: [],
+      roles: getStoredRoles() as SangamRole[],
     };
   });
 
   function login(user: string, fullName: string, roles: SangamRole[]) {
+    const token = getStoredToken() ?? "";
+    saveAuth(token, user, fullName, roles);
     setAuthState({ isAuthenticated: true, user, fullName, roles });
   }
 

@@ -1,11 +1,13 @@
 const AUTH_TOKEN_KEY = "sangam_auth_token";
 const AUTH_USER_KEY = "sangam_auth_user";
 const AUTH_FULL_NAME_KEY = "sangam_auth_full_name";
+const AUTH_ROLES_KEY = "sangam_auth_roles";
 
-export function saveAuth(token: string, user: string, fullName: string) {
+export function saveAuth(token: string, user: string, fullName: string, roles: string[] = []) {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
   localStorage.setItem(AUTH_USER_KEY, user);
   localStorage.setItem(AUTH_FULL_NAME_KEY, fullName);
+  localStorage.setItem(AUTH_ROLES_KEY, JSON.stringify(roles));
 }
 
 export function getStoredToken(): string | null {
@@ -20,8 +22,19 @@ export function getStoredFullName(): string | null {
   return localStorage.getItem(AUTH_FULL_NAME_KEY);
 }
 
+export function getStoredRoles(): string[] {
+  const stored = localStorage.getItem(AUTH_ROLES_KEY);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored) as string[];
+  } catch {
+    return [];
+  }
+}
+
 export function clearAuth() {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
   localStorage.removeItem(AUTH_FULL_NAME_KEY);
+  localStorage.removeItem(AUTH_ROLES_KEY);
 }

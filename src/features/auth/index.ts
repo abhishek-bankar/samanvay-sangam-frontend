@@ -1,4 +1,4 @@
-export { saveAuth, getStoredToken, getStoredUser, getStoredFullName, clearAuth } from "./auth-storage";
+export { saveAuth, getStoredToken, getStoredUser, getStoredFullName, getStoredRoles, clearAuth } from "./auth-storage";
 export { AuthProvider, useAuth } from "./auth-context";
 export { useLogin } from "./hooks/useLogin";
 export { SANGAM_ROLES } from "./types";

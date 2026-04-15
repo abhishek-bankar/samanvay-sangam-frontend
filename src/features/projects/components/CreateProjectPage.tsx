@@ -5,31 +5,40 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { config } from "@/lib/config";
 import { frappe } from "@/lib/api/frappe-client";
 import { useCreateProject } from "@/features/projects/hooks/useProjects";
+import { PROJECT_STATUSES } from "@/features/projects/types";
+import type { ProjectStatus } from "@/features/projects/types";
 
 export function CreateProjectPage() {
   const [projectName, setProjectName] = useState("");
   const [client, setClient] = useState("");
+  const [status, setStatus] = useState<ProjectStatus>("Active");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const createProject = useCreateProject();
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
     try {
-      // 1. Create project in Frappe
       const result = await createProject.mutateAsync({
-        project_name: projectName,
+        projectName,
         client,
+        status,
       });
 
-      // 2. Create folder on shared drive
       const folderPath = `${config.driveRoot}\\${projectName}`;
       try {
         await mkdir(folderPath, { recursive: true });
@@ -39,9 +48,8 @@ export function CreateProjectPage() {
         return;
       }
 
-      // 3. Update project with folder path
       await frappe.updateDoc("Project", result.data.name, {
-        folder_path: folderPath,
+        folderPath,
       });
 
       navigate("/");
@@ -79,6 +87,19 @@ export function CreateProjectPage() {
                 placeholder="e.g. ACME Corp"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>
