@@ -5,6 +5,8 @@ import { ProjectSelector } from "@/app/ProjectSelector";
 import { LoginPage } from "@/features/auth/components/LoginPage";
 import { CreateProjectPage } from "@/features/projects/components/CreateProjectPage";
 import { ProjectListPage } from "@/features/projects/components/ProjectListPage";
+import { CreateBatchPage } from "@/features/batches/components/CreateBatchPage";
+import { BatchListPage } from "@/features/batches/components/BatchListPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -39,7 +41,8 @@ export function AppRouter() {
           <Route path="rejected-pool" element={<PlaceholderPage title="Rejected Pool" />} />
           <Route path="send-to-client" element={<PlaceholderPage title="Send to Client" />} />
           <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />
-          <Route path="batches" element={<PlaceholderPage title="Batch Management" />} />
+          <Route path="batches" element={<BatchListPage />} />
+          <Route path="batches/new" element={<CreateBatchPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

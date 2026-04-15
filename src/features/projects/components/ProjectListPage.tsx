@@ -17,16 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -35,8 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useProjects, useUpdateProject, useDeleteProject } from "@/features/projects/hooks/useProjects";
+import { useProjects, useUpdateProject } from "@/features/projects/hooks/useProjects";
 import { useProject } from "@/features/projects/project-context";
+import { DeleteProjectDialog } from "@/features/projects/components/DeleteProjectDialog";
 import { PROJECT_STATUSES } from "@/features/projects/types";
 import type { Project, ProjectStatus } from "@/features/projects/types";
 
@@ -45,13 +36,12 @@ export function ProjectListPage() {
   const { setProject } = useProject();
   const navigate = useNavigate();
   const updateProject = useUpdateProject();
-  const deleteProject = useDeleteProject();
 
   const [search, setSearch] = useState("");
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editName, setEditName] = useState("");
   const [editClient, setEditClient] = useState("");
-  const [editStatus, setEditStatus] = useState<"Active" | "Archived">("Active");
+  const [editStatus, setEditStatus] = useState<ProjectStatus>("Active");
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
 
   function handleSelect(project: Project) {
@@ -73,12 +63,6 @@ export function ProjectListPage() {
       data: { projectName: editName, client: editClient, status: editStatus },
     });
     setEditingProject(null);
-  }
-
-  async function handleDelete() {
-    if (!deletingProject) return;
-    await deleteProject.mutateAsync(deletingProject.name);
-    setDeletingProject(null);
   }
 
   if (isPending) return <p className="py-8 text-center text-muted-foreground">Loading projects...</p>;
@@ -222,23 +206,10 @@ export function ProjectListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deletingProject} onOpenChange={() => setDeletingProject(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingProject?.projectName}&quot;? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteProject.isPending}>
-              {deleteProject.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteProjectDialog
+        project={deletingProject}
+        onClose={() => setDeletingProject(null)}
+      />
     </div>
   );
 }

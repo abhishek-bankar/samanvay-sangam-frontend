@@ -15,8 +15,11 @@ const ACTIONEE: SangamRole = "SANGAM Actionee";
 const ALL_ROLES: SangamRole[] = [PM, SME, QC, ACTIONEE];
 const PM_SME: SangamRole[] = [PM, SME];
 
-export const MENU_ITEMS: MenuItem[] = [
+export const GLOBAL_MENU_ITEMS: MenuItem[] = [
   { label: "Projects", path: "/projects", icon: "Briefcase", requiredRoles: ALL_ROLES },
+];
+
+export const PROJECT_MENU_ITEMS: MenuItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: "LayoutDashboard", requiredRoles: ALL_ROLES },
   { label: "My Work", path: "/my-work", icon: "ClipboardList", requiredRoles: ALL_ROLES },
   { label: "Support Register", path: "/supports", icon: "FileText", requiredRoles: PM_SME },
@@ -28,8 +31,8 @@ export const MENU_ITEMS: MenuItem[] = [
   { label: "Batch Management", path: "/batches", icon: "FolderOpen", requiredRoles: [PM] },
 ];
 
-export function getVisibleMenuItems(userRoles: SangamRole[]): MenuItem[] {
-  return MENU_ITEMS.filter((item) =>
+export function getVisibleMenuItems(userRoles: SangamRole[], items: MenuItem[]): MenuItem[] {
+  return items.filter((item) =>
     item.requiredRoles.some((role) => userRoles.includes(role)),
   );
 }
