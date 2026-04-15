@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .env
+Sangam Server/
 
 # Editor directories and files
 .idea

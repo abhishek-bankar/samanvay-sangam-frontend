@@ -13,13 +13,12 @@ export function LoginPage() {
   const login = useLogin();
   const auth = useAuth();
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const result = await login.mutateAsync({ email, password });
 
-    // Roles will be fetched by AuthProvider via useEffect on mount
-    auth.login(result.user, result.fullName, []);
+    auth.login(result.user, result.fullName, result.roles);
     navigate("/");
   }
 
@@ -36,7 +35,9 @@ export function LoginPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -47,7 +48,9 @@ export function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

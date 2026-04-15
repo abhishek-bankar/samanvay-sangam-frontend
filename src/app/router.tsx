@@ -3,6 +3,8 @@ import { AppShell } from "@/app/AppShell";
 import { ProtectedRoute } from "@/app/ProtectedRoute";
 import { ProjectSelector } from "@/app/ProjectSelector";
 import { LoginPage } from "@/features/auth/components/LoginPage";
+import { CreateProjectPage } from "@/features/projects/components/CreateProjectPage";
+import { ProjectListPage } from "@/features/projects/components/ProjectListPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -27,6 +29,8 @@ export function AppRouter() {
           }
         >
           <Route index element={<ProjectSelector />} />
+          <Route path="projects" element={<ProjectListPage />} />
+          <Route path="projects/new" element={<CreateProjectPage />} />
           <Route path="dashboard" element={<PlaceholderPage title="Dashboard" />} />
           <Route path="my-work" element={<PlaceholderPage title="My Work" />} />
           <Route path="supports" element={<PlaceholderPage title="Support Register" />} />

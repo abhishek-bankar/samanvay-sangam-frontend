@@ -1,37 +1,18 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { config } from "@/lib/config";
+import { createContext, useContext, useState } from "react";
 import {
   getStoredToken,
   getStoredUser,
   getStoredFullName,
   clearAuth,
 } from "@/features/auth/auth-storage";
-import { SANGAM_ROLES } from "@/features/auth/types";
 import type { AuthState, SangamRole } from "@/features/auth/types";
 
 interface AuthContextValue extends AuthState {
   login: (user: string, fullName: string, roles: SangamRole[]) => void;
   logout: () => void;
-  setRoles: (roles: SangamRole[]) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-async function fetchUserRoles(): Promise<SangamRole[]> {
-  const res = await fetch(
-    `${config.frappeUrl}/api/method/frappe.utils.user.get_roles`,
-    { credentials: "include" },
-  );
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch user roles");
-  }
-
-  const data: { message: string[] } = await res.json();
-  return data.message.filter((r): r is SangamRole =>
-    (SANGAM_ROLES as readonly string[]).includes(r),
-  );
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>(() => {
@@ -46,15 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   });
 
-  // Fetch roles on mount if already authenticated
-  useEffect(() => {
-    if (authState.isAuthenticated && authState.roles.length === 0) {
-      fetchUserRoles().then((roles) => {
-        setAuthState((prev) => ({ ...prev, roles }));
-      });
-    }
-  }, [authState.isAuthenticated, authState.roles.length]);
-
   function login(user: string, fullName: string, roles: SangamRole[]) {
     setAuthState({ isAuthenticated: true, user, fullName, roles });
   }
@@ -64,12 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthState({ isAuthenticated: false, user: null, fullName: null, roles: [] });
   }
 
-  function setRoles(roles: SangamRole[]) {
-    setAuthState((prev) => ({ ...prev, roles }));
-  }
-
   return (
-    <AuthContext value={{ ...authState, login, logout, setRoles }}>
+    <AuthContext value={{ ...authState, login, logout }}>
       {children}
     </AuthContext>
   );

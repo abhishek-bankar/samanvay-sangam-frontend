@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/features/**/index.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "tw-animate-css",
+    "babel-plugin-react-compiler",
+    "@fontsource-variable/inter",
+    "@tauri-apps/api",
+    "@tauri-apps/plugin-opener",
+    "@tauri-apps/plugin-shell",
+    "shadcn"
+  ],
+  "ignoreBinaries": ["gsudo"],
+  "ignore": ["src/components/ui/**"],
+  "ignoreExportsUsedInFile": true,
+  "includeEntryExports": true
+}

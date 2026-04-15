@@ -1,4 +1,5 @@
 import { config } from "@/lib/config";
+import { getStoredToken } from "@/features/auth/auth-storage";
 import { keysToCamel, keysToSnake } from "@/lib/utils";
 
 type FrappeFilter = [string, string, unknown];
@@ -21,10 +22,15 @@ interface FrappeDocResponse<T> {
 }
 
 async function frappeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
   const response = await fetch(`${config.frappeUrl}${endpoint}`, {
     ...options,
-    credentials: "include",
     headers: {
+      Authorization: `token ${token}`,
       "Content-Type": "application/json",
       ...options.headers,
     },
@@ -40,18 +46,27 @@ async function frappeRequest<T>(endpoint: string, options: RequestInit = {}): Pr
   return keysToCamel(json) as T;
 }
 
+function setParam(sp: URLSearchParams, key: string, value: unknown) {
+  if (value == null) return;
+  sp.set(key, typeof value === "string" ? value : JSON.stringify(value));
+}
+
+function buildListQuery(params?: FrappeListParams): string {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+  setParam(sp, "fields", params.fields);
+  setParam(sp, "filters", params.filters);
+  setParam(sp, "order_by", params.orderBy);
+  setParam(sp, "start", params.start?.toString());
+  setParam(sp, "limit", params.limit?.toString());
+  return sp.toString();
+}
+
 async function getList<T>(
   doctype: string,
   params?: FrappeListParams,
 ): Promise<FrappeListResponse<T>> {
-  const searchParams = new URLSearchParams();
-  if (params?.fields) searchParams.set("fields", JSON.stringify(params.fields));
-  if (params?.filters) searchParams.set("filters", JSON.stringify(params.filters));
-  if (params?.orderBy) searchParams.set("order_by", params.orderBy);
-  if (params?.start !== undefined) searchParams.set("start", String(params.start));
-  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
-
-  const query = searchParams.toString();
+  const query = buildListQuery(params);
   return frappeRequest(`/api/v2/document/${doctype}${query ? `?${query}` : ""}`);
 }
 

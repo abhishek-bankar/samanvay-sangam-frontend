@@ -1,36 +1,43 @@
 import { useMutation } from "@tanstack/react-query";
 import { config } from "@/lib/config";
 import { saveAuth } from "@/features/auth/auth-storage";
-import type { LoginCredentials } from "@/features/auth/types";
+import type { LoginCredentials, SangamRole } from "@/features/auth/types";
+import { SANGAM_ROLES } from "@/features/auth/types";
 
-interface LoginResponse {
-  message: string;
-  full_name: string;
+interface LoginApiResponse {
+  message: {
+    token: string;
+    user: string;
+    full_name: string;
+    roles: string[];
+  };
 }
 
 async function loginToFrappe({ email, password }: LoginCredentials) {
-  const loginRes = await fetch(`${config.frappeUrl}/api/method/login`, {
-    method: "POST",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
+  const res = await fetch(
+    `${config.frappeUrl}/api/method/samanvay_sangam_backend.api.login`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usr: email, pwd: password }),
     },
-    body: JSON.stringify({ usr: email, pwd: password }),
-    credentials: "include",
-  });
+  );
 
-  if (!loginRes.ok) {
-    const err = await loginRes.json();
+  if (!res.ok) {
+    const err = await res.json();
     throw new Error(err.message || "Login failed");
   }
 
-  const loginData: LoginResponse = await loginRes.json();
+  const data: LoginApiResponse = await res.json();
+  const { token, user, full_name, roles } = data.message;
 
-  // Browser stores the sid cookie automatically via credentials: "include"
-  // We only store user info in localStorage for UI purposes
-  saveAuth("session", email, loginData.full_name);
+  saveAuth(token, user, full_name);
 
-  return { user: email, fullName: loginData.full_name };
+  const sangamRoles = roles.filter((r): r is SangamRole =>
+    (SANGAM_ROLES as readonly string[]).includes(r),
+  );
+
+  return { user, fullName: full_name, token, roles: sangamRoles };
 }
 
 export function useLogin() {
