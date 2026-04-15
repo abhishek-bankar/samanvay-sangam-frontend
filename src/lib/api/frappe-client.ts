@@ -1,9 +1,11 @@
 import { config } from "@/lib/config";
 import { keysToCamel, keysToSnake } from "@/lib/utils";
 
+type FrappeFilter = [string, string, unknown];
+
 interface FrappeListParams {
   fields?: string[];
-  filters?: Record<string, unknown>;
+  filters?: FrappeFilter[];
   orderBy?: string;
   start?: number;
   limit?: number;
@@ -44,7 +46,7 @@ async function getList<T>(
 ): Promise<FrappeListResponse<T>> {
   const searchParams = new URLSearchParams();
   if (params?.fields) searchParams.set("fields", JSON.stringify(params.fields));
-  if (params?.filters) searchParams.set("filters", JSON.stringify(keysToSnake(params.filters)));
+  if (params?.filters) searchParams.set("filters", JSON.stringify(params.filters));
   if (params?.orderBy) searchParams.set("order_by", params.orderBy);
   if (params?.start !== undefined) searchParams.set("start", String(params.start));
   if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));

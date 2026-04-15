@@ -118,14 +118,22 @@ GET /api/v2/document/Support?start=0&limit=20
 
 ### Filtering
 
-**v1 filter syntax (complex, array-based):**
+**v2 supports both syntaxes (verified on Frappe v16):**
+
+**Array syntax (PREFERRED — use this in all SANGAM code):**
 ```
-filters=[["DocType","field","=","value"]]
+filters=[["status","=","Open"],["actionee","=","Ramesh"]]
 ```
 
-**v2 filter syntax (simpler, object-based):**
+**Object syntax (also works, but we don't use it):**
 ```
 filters={"status":"Open","actionee":"Ramesh"}
+```
+
+**v1 required DocType prefix in arrays — v2 does not:**
+```
+v1: filters=[["Support","status","=","Open"]]
+v2: filters=[["status","=","Open"]]
 ```
 
 ---
