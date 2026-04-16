@@ -15,10 +15,14 @@ interface SupportsToolbarProps {
   onAssigneeFilterChange: (value: string) => void;
   assignees: { email: string; fullName: string }[];
   showAssignActions: boolean;
+  showReassignActions: boolean;
+  showReassignAll: boolean;
   selectedCount: number;
   totalCount: number;
   onAssign: () => void;
   onAutoAssign: () => void;
+  onReassign: () => void;
+  onReassignAll: () => void;
 }
 
 export function SupportsToolbar({
@@ -28,10 +32,14 @@ export function SupportsToolbar({
   onAssigneeFilterChange,
   assignees,
   showAssignActions,
+  showReassignActions,
+  showReassignAll,
   selectedCount,
   totalCount,
   onAssign,
   onAutoAssign,
+  onReassign,
+  onReassignAll,
 }: SupportsToolbarProps) {
   return (
     <div className="flex items-center gap-3">
@@ -56,25 +64,37 @@ export function SupportsToolbar({
           </SelectContent>
         </Select>
       )}
-      {showAssignActions && (
-        <div className="ml-auto flex gap-2">
-          <Button
-            disabled={selectedCount === 0}
-            onClick={onAssign}
-            className="cursor-pointer"
-          >
-            Assign ({selectedCount})
+      <div className="ml-auto flex gap-2">
+        {showAssignActions && (
+          <>
+            <Button
+              disabled={selectedCount === 0}
+              onClick={onAssign}
+              className="cursor-pointer"
+            >
+              Assign ({selectedCount})
+            </Button>
+            <Button
+              variant="outline"
+              disabled={totalCount === 0}
+              onClick={onAutoAssign}
+              className="cursor-pointer"
+            >
+              Auto Assign
+            </Button>
+          </>
+        )}
+        {showReassignActions && selectedCount > 0 && (
+          <Button onClick={onReassign} className="cursor-pointer">
+            Reassign ({selectedCount})
           </Button>
-          <Button
-            variant="outline"
-            disabled={totalCount === 0}
-            onClick={onAutoAssign}
-            className="cursor-pointer"
-          >
-            Auto Assign
+        )}
+        {showReassignAll && (
+          <Button variant="outline" onClick={onReassignAll} className="cursor-pointer">
+            Reassign All
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

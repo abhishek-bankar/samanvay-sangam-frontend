@@ -5,9 +5,8 @@ import { useBatchSupports } from "@/features/assignment/hooks/useSupports";
 import { useActionees } from "@/features/assignment/hooks/useActionees";
 import { StatusTabs } from "@/features/assignment/components/StatusTabs";
 import { SupportTable } from "@/features/assignment/components/SupportTable";
-import { AssignDialog } from "@/features/assignment/components/AssignDialog";
-import { AutoAssignDialog } from "@/features/assignment/components/AutoAssignDialog";
 import { SupportsToolbar } from "@/features/batches/components/SupportsToolbar";
+import { SupportsDialogs } from "@/features/batches/components/SupportsDialogs";
 
 function filterSupports(supports: Support[], tab: string, search: string, assignee: string) {
   let result = tab === "all" ? supports : supports.filter((s) => s.status === tab);
@@ -44,8 +43,7 @@ export function BatchSupportsView({ batchId, batchFolderPath }: BatchSupportsVie
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState<"assign" | "autoAssign" | "reassign" | "reassignAll" | null>(null);
 
   if (isPending) return <p className="py-4 text-center text-muted-foreground">Loading supports...</p>;
   if (isError) return <p className="py-4 text-center text-destructive">{error.message}</p>;
@@ -54,9 +52,11 @@ export function BatchSupportsView({ batchId, batchFolderPath }: BatchSupportsVie
   const filtered = filterSupports(allSupports, activeTab, search, assigneeFilter);
   const statusCounts = countByStatus(allSupports);
   const isReadyTab = activeTab === SUPPORT_STATUS.READY_TO_ASSIGN;
+  const isInProgressTab = activeTab === SUPPORT_STATUS.IN_PROGRESS;
+  const showCheckboxes = isReadyTab || isInProgressTab;
   const selectedSupports = filtered.filter((s) => selected.has(s.name));
 
-  // Unique assignees in current tab (for filter dropdown)
+  // Unique assignees in current tab
   const tabSupports = activeTab === "all" ? allSupports : allSupports.filter((s) => s.status === activeTab);
   const assigneesInTab = [...new Set(tabSupports.map((s) => s.assignedTo).filter(Boolean))]
     .map((email) => ({ email, fullName: userNameMap.get(email) ?? email }));
@@ -68,8 +68,7 @@ export function BatchSupportsView({ batchId, batchFolderPath }: BatchSupportsVie
   }
 
   function handleClose() {
-    setAssignOpen(false);
-    setAutoAssignOpen(false);
+    setOpenDialog(null);
     setSelected(new Set());
   }
 
@@ -89,36 +88,31 @@ export function BatchSupportsView({ batchId, batchFolderPath }: BatchSupportsVie
         onAssigneeFilterChange={setAssigneeFilter}
         assignees={assigneesInTab}
         showAssignActions={isReadyTab}
+        showReassignActions={isInProgressTab}
+        showReassignAll={isInProgressTab && assigneeFilter !== "all"}
         selectedCount={selected.size}
         totalCount={filtered.length}
-        onAssign={() => setAssignOpen(true)}
-        onAutoAssign={() => setAutoAssignOpen(true)}
+        onAssign={() => setOpenDialog("assign")}
+        onAutoAssign={() => setOpenDialog("autoAssign")}
+        onReassign={() => setOpenDialog("reassign")}
+        onReassignAll={() => setOpenDialog("reassignAll")}
       />
 
       <SupportTable
         supports={filtered}
-        showCheckboxes={isReadyTab}
+        showCheckboxes={showCheckboxes}
         selected={selected}
         onSelectionChange={setSelected}
         userNameMap={userNameMap}
       />
 
-      {assignOpen && (
-        <AssignDialog
-          supports={selectedSupports}
-          batchFolderPath={batchFolderPath}
-          open={assignOpen}
-          onClose={handleClose}
-        />
-      )}
-      {autoAssignOpen && (
-        <AutoAssignDialog
-          supports={filtered}
-          batchFolderPath={batchFolderPath}
-          open={autoAssignOpen}
-          onClose={handleClose}
-        />
-      )}
+      <SupportsDialogs
+        openDialog={openDialog}
+        onClose={handleClose}
+        selectedSupports={selectedSupports}
+        filteredSupports={filtered}
+        batchFolderPath={batchFolderPath}
+      />
     </div>
   );
 }
