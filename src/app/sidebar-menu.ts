@@ -22,8 +22,6 @@ export const GLOBAL_MENU_ITEMS: MenuItem[] = [
 export const PROJECT_MENU_ITEMS: MenuItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: "LayoutDashboard", requiredRoles: ALL_ROLES },
   { label: "My Work", path: "/my-work", icon: "ClipboardList", requiredRoles: ALL_ROLES },
-  { label: "Support Register", path: "/supports", icon: "FileText", requiredRoles: PM_SME },
-  { label: "Assignment", path: "/assignment", icon: "UserPlus", requiredRoles: PM_SME },
   { label: "Review Queue", path: "/review", icon: "CheckSquare", requiredRoles: PM_SME },
   { label: "Rejected Pool", path: "/rejected-pool", icon: "AlertTriangle", requiredRoles: [PM, SME, QC] },
   { label: "Send to Client", path: "/send-to-client", icon: "Send", requiredRoles: [PM] },

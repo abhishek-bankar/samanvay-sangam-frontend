@@ -46,7 +46,7 @@ export function ProjectListPage() {
 
   function handleSelect(project: Project) {
     setProject(project);
-    navigate("/dashboard");
+    navigate("/batches");
   }
 
   function openEdit(project: Project) {

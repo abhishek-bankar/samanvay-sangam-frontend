@@ -19,6 +19,7 @@ export function SyncCleanedButton({ batchFolderPath, batchId }: SyncCleanedButto
     try {
       const result = await syncCleaned(batchFolderPath, batchId);
       queryClient.invalidateQueries({ queryKey: ["batches"] });
+      queryClient.invalidateQueries({ queryKey: ["batch", batchId] });
       queryClient.invalidateQueries({ queryKey: ["supports"] });
 
       const parts = [`${result.matched.length} matched`];

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { remove } from "@tauri-apps/plugin-fs";
@@ -37,6 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function BatchListPage() {
   const { selectedProject } = useProject();
+  const navigate = useNavigate();
   const { data, isPending, isError, error } = useBatches(selectedProject?.name ?? "");
   const deleteBatch = useDeleteBatch();
   const [deletingBatch, setDeletingBatch] = useState<Batch | null>(null);
@@ -97,7 +98,7 @@ export function BatchListPage() {
             </TableHeader>
             <TableBody>
               {data.data.map((batch: Batch) => (
-                <TableRow key={batch.name}>
+                <TableRow key={batch.name} className="cursor-pointer" onClick={() => navigate(`/batches/${batch.name}`)}>
                   <TableCell className="font-medium">{batch.batchName}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[batch.status] ?? "bg-gray-100 text-gray-700"}`}>

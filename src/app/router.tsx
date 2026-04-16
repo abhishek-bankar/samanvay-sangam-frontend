@@ -7,6 +7,7 @@ import { CreateProjectPage } from "@/features/projects/components/CreateProjectP
 import { ProjectListPage } from "@/features/projects/components/ProjectListPage";
 import { CreateBatchPage } from "@/features/batches/components/CreateBatchPage";
 import { BatchListPage } from "@/features/batches/components/BatchListPage";
+import { BatchDetailPage } from "@/features/batches/components/BatchDetailPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -35,14 +36,13 @@ export function AppRouter() {
           <Route path="projects/new" element={<CreateProjectPage />} />
           <Route path="dashboard" element={<PlaceholderPage title="Dashboard" />} />
           <Route path="my-work" element={<PlaceholderPage title="My Work" />} />
-          <Route path="supports" element={<PlaceholderPage title="Support Register" />} />
-          <Route path="assignment" element={<PlaceholderPage title="Assignment" />} />
           <Route path="review" element={<PlaceholderPage title="Review Queue" />} />
           <Route path="rejected-pool" element={<PlaceholderPage title="Rejected Pool" />} />
           <Route path="send-to-client" element={<PlaceholderPage title="Send to Client" />} />
           <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />
           <Route path="batches" element={<BatchListPage />} />
           <Route path="batches/new" element={<CreateBatchPage />} />
+          <Route path="batches/:batchId" element={<BatchDetailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

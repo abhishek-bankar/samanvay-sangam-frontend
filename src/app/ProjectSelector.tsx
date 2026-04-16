@@ -7,8 +7,8 @@ export function ProjectSelector() {
   const { data, isPending, isError, error } = useProjects();
   const { selectedProject } = useProject();
 
-  // If a project is already selected, go straight to dashboard
-  if (selectedProject) return <Navigate to="/dashboard" replace />;
+  // If a project is already selected, go straight to batches
+  if (selectedProject) return <Navigate to="/batches" replace />;
 
   if (isPending) return <p className="py-12 text-center text-muted-foreground">Loading projects...</p>;
   if (isError) return <p className="py-12 text-center text-destructive">{error.message}</p>;
