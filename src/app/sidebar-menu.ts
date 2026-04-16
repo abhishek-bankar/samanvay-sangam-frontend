@@ -1,3 +1,4 @@
+import { ROLE, SANGAM_ROLES } from "@/features/auth/types";
 import type { SangamRole } from "@/features/auth/types";
 
 export interface MenuItem {
@@ -7,13 +8,8 @@ export interface MenuItem {
   requiredRoles: SangamRole[];
 }
 
-const PM: SangamRole = "SANGAM PM";
-const SME: SangamRole = "SANGAM SME";
-const QC: SangamRole = "SANGAM QC";
-const ACTIONEE: SangamRole = "SANGAM Actionee";
-
-const ALL_ROLES: SangamRole[] = [PM, SME, QC, ACTIONEE];
-const PM_SME: SangamRole[] = [PM, SME];
+const ALL_ROLES: SangamRole[] = [...SANGAM_ROLES];
+const PM_SME: SangamRole[] = [ROLE.PM, ROLE.SME];
 
 export const GLOBAL_MENU_ITEMS: MenuItem[] = [
   { label: "Projects", path: "/projects", icon: "Briefcase", requiredRoles: ALL_ROLES },
@@ -21,12 +17,11 @@ export const GLOBAL_MENU_ITEMS: MenuItem[] = [
 
 export const PROJECT_MENU_ITEMS: MenuItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: "LayoutDashboard", requiredRoles: ALL_ROLES },
-  { label: "My Work", path: "/my-work", icon: "ClipboardList", requiredRoles: ALL_ROLES },
   { label: "Review Queue", path: "/review", icon: "CheckSquare", requiredRoles: PM_SME },
-  { label: "Rejected Pool", path: "/rejected-pool", icon: "AlertTriangle", requiredRoles: [PM, SME, QC] },
-  { label: "Send to Client", path: "/send-to-client", icon: "Send", requiredRoles: [PM] },
+  { label: "Rejected Pool", path: "/rejected-pool", icon: "AlertTriangle", requiredRoles: [ROLE.PM, ROLE.SME, ROLE.QC] },
+  { label: "Send to Client", path: "/send-to-client", icon: "Send", requiredRoles: [ROLE.PM] },
   { label: "Analytics", path: "/analytics", icon: "BarChart3", requiredRoles: PM_SME },
-  { label: "Batch Management", path: "/batches", icon: "FolderOpen", requiredRoles: [PM] },
+  { label: "Batch Management", path: "/batches", icon: "FolderOpen", requiredRoles: [ROLE.PM] },
 ];
 
 export function getVisibleMenuItems(userRoles: SangamRole[], items: MenuItem[]): MenuItem[] {

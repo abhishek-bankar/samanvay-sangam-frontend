@@ -7,6 +7,13 @@ export const SANGAM_ROLES = [
 
 export type SangamRole = (typeof SANGAM_ROLES)[number];
 
+export const ROLE = {
+  PM: "SANGAM PM" as SangamRole,
+  SME: "SANGAM SME" as SangamRole,
+  QC: "SANGAM QC" as SangamRole,
+  ACTIONEE: "SANGAM Actionee" as SangamRole,
+} as const;
+
 export interface LoginCredentials {
   email: string;
   password: string;

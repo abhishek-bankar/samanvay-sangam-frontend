@@ -5,7 +5,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { useProject } from "@/features/projects/project-context";
 
 export function Header() {
-  const { fullName, logout } = useAuth();
+  const { fullName, roles, logout } = useAuth();
   const { selectedProject, clearProject } = useProject();
   const navigate = useNavigate();
 
@@ -34,7 +34,14 @@ export function Header() {
         )}
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium">{fullName}</span>
+        <div className="text-right">
+          <span className="text-sm font-medium">{fullName}</span>
+          {roles.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {roles.filter((r) => r.startsWith("SANGAM")).join(", ")}
+            </p>
+          )}
+        </div>
         <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
           <LogOut className="h-4 w-4" />
         </Button>

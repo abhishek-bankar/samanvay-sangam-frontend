@@ -2,6 +2,8 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { frappe } from "@/lib/api/frappe-client";
+import { useAuth } from "@/features/auth/auth-context";
+import { ROLE } from "@/features/auth/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SyncCleanedButton } from "@/features/batches/components/SyncCleanedButton";
@@ -18,6 +20,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function BatchDetailPage() {
   const { batchId } = useParams<{ batchId: string }>();
+  const { roles } = useAuth();
+  const isPm = roles.includes(ROLE.PM);
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["batch", batchId],
     queryFn: () => frappe.getDoc<Batch>("Batch", batchId!),
@@ -52,7 +56,7 @@ export function BatchDetailPage() {
             {batch.unsyncedCount > 0 && ` · ${batch.unsyncedCount} pending`}
           </p>
         </div>
-        {batch.folderPath && (
+        {isPm && batch.folderPath && (
           <SyncCleanedButton batchFolderPath={batch.folderPath} batchId={batch.name} />
         )}
       </div>

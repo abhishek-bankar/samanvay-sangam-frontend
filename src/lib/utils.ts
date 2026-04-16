@@ -39,6 +39,15 @@ export function toFrappeDatetime(date: Date): string {
   return `${y}-${m}-${d} ${h}:${min}:${s}`;
 }
 
+/** Display a Frappe datetime string in Asia/Kolkata timezone. */
+export function formatDateTime(frappeDatetime: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Asia/Kolkata",
+  }).format(new Date(frappeDatetime));
+}
+
 export function keysToSnake(obj: unknown): unknown {
   if (Array.isArray(obj)) {
     return obj.map(keysToSnake);

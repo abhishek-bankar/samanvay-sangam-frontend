@@ -12,7 +12,6 @@
     "babel-plugin-react-compiler",
     "@fontsource-variable/inter",
     "@tauri-apps/api",
-    "@tauri-apps/plugin-opener",
     "@tauri-apps/plugin-shell",
     "shadcn"
   ],

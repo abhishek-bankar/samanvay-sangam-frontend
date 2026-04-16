@@ -35,7 +35,6 @@ export function AppRouter() {
           <Route path="projects" element={<ProjectListPage />} />
           <Route path="projects/new" element={<CreateProjectPage />} />
           <Route path="dashboard" element={<PlaceholderPage title="Dashboard" />} />
-          <Route path="my-work" element={<PlaceholderPage title="My Work" />} />
           <Route path="review" element={<PlaceholderPage title="Review Queue" />} />
           <Route path="rejected-pool" element={<PlaceholderPage title="Rejected Pool" />} />
           <Route path="send-to-client" element={<PlaceholderPage title="Send to Client" />} />
